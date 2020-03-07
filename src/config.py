@@ -47,6 +47,13 @@ class Config(object):
         return os.environ[envvar]
 
     @staticmethod
+    def get_required_config_var(configvar: str) -> str:
+        assert cls._CONFIG
+        if configvar not in cls._CONFIG:
+            riase Exception(f"Pleaes set the {configvar} variable in the config file {cls._CONFIG_FILE}")
+        return cls._CONFIG[configvar]
+
+    @staticmethod
     def get_config_file() -> str:
         return Config._CONFIG_FILE.config_file
 
@@ -55,10 +62,18 @@ class Config(object):
     #############################
 
     _FOO: typing.Optional[str] = None
+    _BAR: typing.Optional[str] = None
 
     @classmethod
     def get_foo_var(cls) -> str:
-        assert cls._CONFIG
+        """Example variable that is set in the config file (preferred)"""
         if cls._FOO is None:
-            cls._FOO = cls._CONFIG.get('foo')
+            cls._FOO = get_required_config_var('foo')
         return cls._FOO
+
+    @classmethod
+    def get_bar_var(cls) -> str:
+        """Example variable that is set via env var (not preferred)"""
+        if cls._BAR is None:
+            cls._BAR = get_required_env_var('BAR')
+        return cls._BAR
