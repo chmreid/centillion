@@ -2,6 +2,9 @@ import logging
 from whoosh import fields, index
 
 
+logger = logging.getLogger(__name__)
+
+
 class Doctype(metaclass=DoctypeRegistry):
     """
     Doctype is the base doctype class.
@@ -12,7 +15,7 @@ class Doctype(metaclass=DoctypeRegistry):
     - constructor: takes credentials as input, validate credentials
     - validate credentials: does what it says
     - doc iterator: return an Iterator class
-    - schema (static method): return the whoosh schema of this doctype
+    - schema (class attribute)
     - sync: use doc iterator and search to add/update/delete documents
     - search result template (static method): render a search result of this doctype
     """
@@ -43,11 +46,13 @@ class Doctype(metaclass=DoctypeRegistry):
     @classmethod
     def get_common_schema(cls):
         """Return a copy of the common schema shared by all document types"""
+        logger.debug("Fetching common schema")
         return cls.common_schema.copy()
 
     @classmethod
     def get_schema(cls):
         """Return a copy of this doctype's custom, non-common schema fields"""
+        logger.debug("Fetching class schema")
         return cls.schema.copy()
 
     def sync(self):
