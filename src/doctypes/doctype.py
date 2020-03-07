@@ -1,3 +1,4 @@
+import logging
 from whoosh import fields, index
 
 
@@ -15,7 +16,7 @@ class Doctype(metaclass=DoctypeRegistry):
     - sync: use doc iterator and search to add/update/delete documents
     - search result template (static method): render a search result of this doctype
     """
-    global_schema = dict(
+    common_schema = dict(
         id = fields.ID(stored=True, unique=True),
         fingerprint = fields.ID(stored=True),
         kind = fields.ID(stored=True),
@@ -24,6 +25,7 @@ class Doctype(metaclass=DoctypeRegistry):
         indexed_time = fields.DATETIME(stored=True),
         name = fields.TEXT(stored=True, field_boost=100.0)
     )
+    schema = dict()
 
     def __init__(self, *args, *kwargs):
         raise NotImplementedError()
@@ -39,8 +41,14 @@ class Doctype(metaclass=DoctypeRegistry):
         self._not_implemented('get_doc_iterator')
 
     @classmethod
-    def schema(cls):
-        return cls.global_schema
+    def get_common_schema(cls):
+        """Return a copy of the common schema shared by all document types"""
+        return cls.common_schema.copy()
+
+    @classmethod
+    def get_schema(cls):
+        """Return a copy of this doctype's custom, non-common schema fields"""
+        return cls.schema.copy()
 
     def sync(self):
         self._not_implemented('sync')
