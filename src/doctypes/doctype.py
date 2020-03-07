@@ -14,9 +14,9 @@ class Doctype(metaclass=DoctypeRegistry):
     Each doctype class should define:
     - constructor: takes credentials as input, validate credentials
     - validate credentials: does what it says
-    - doc iterator: return an Iterator class
     - schema (class attribute)
-    - sync: use doc iterator and search to add/update/delete documents
+    - get_remote_list: list of remote document IDs and last modified date
+    - get_by_id: get document by index ID, return item matching common + doctype schema
     - search result template (static method): render a search result of this doctype
     """
     common_schema = dict(
@@ -40,8 +40,11 @@ class Doctype(metaclass=DoctypeRegistry):
     def validate_credentials(self):
         self._not_implemented('validate_credentials')
 
-    def get_doc_iterator(self):
-        self._not_implemented('get_doc_iterator')
+    def get_remote_list(self):
+        self._not_implemented('get_remote_list')
+
+    def get_by_id(self):
+        self._not_implemented('get_by_id')
 
     @classmethod
     def get_common_schema(cls):
