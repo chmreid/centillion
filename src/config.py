@@ -3,11 +3,6 @@ import typing
 from enum import Enum, auto
 
 
-class FooConfig(Enum):
-    FOO = auto()
-    BAR = auto()
-
-
 class Config(object):
     """
     Singleton class to allow uniform access to centillion configuration.
