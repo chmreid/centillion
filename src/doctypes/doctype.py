@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 
 class Doctype(metaclass=DoctypeRegistry):
+    doctype = "base"
     """
     Doctype is the base doctype class.
 
@@ -26,7 +27,7 @@ class Doctype(metaclass=DoctypeRegistry):
         created_time = fields.DATETIME(stored=True),
         modified_time = fields.DATETIME(stored=True),
         indexed_time = fields.DATETIME(stored=True),
-        name = fields.TEXT(stored=True, field_boost=100.0)
+        name = fields.TEXT(stored=True, field_boost=100.0),
     )
     schema = dict()
 
@@ -57,6 +58,12 @@ class Doctype(metaclass=DoctypeRegistry):
         """Return a copy of this doctype's custom, non-common schema fields"""
         logger.debug("Fetching class schema")
         return cls.schema.copy()
+
+    @classmethod
+    def get_doctype(cls):
+        """Return the string label for this doctype"""
+        logger.debug("Fetching class doctype")
+        return cls.doctype
 
     def sync(self):
         self._not_implemented('sync')

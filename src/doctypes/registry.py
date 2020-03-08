@@ -1,3 +1,9 @@
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
 class DoctypeRegistry(type):
     """
     Metaclass that forces all classes using it to
@@ -7,7 +13,11 @@ class DoctypeRegistry(type):
     REGISTRY = {}
     def __new__(cls, name, bases, attrs):
         new_cls = type.__new__(cls, name, bases, attrs)
-        new_name = new_cls.__name__
+        try:
+            new_name = new_cls.doctype
+        except AttributeError:
+            new_name = new_cls.__name__
+            logger.warn(f"Class attribute doctype not defined for {new_name}")
         cls.REGISTRY[new_name] = new_cls
 
     @classmethod
