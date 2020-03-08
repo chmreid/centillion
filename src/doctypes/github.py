@@ -1,3 +1,4 @@
+"""Defines several Github doctypes"""
 import logging
 import typing
 import datetime
