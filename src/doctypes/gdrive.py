@@ -1,6 +1,9 @@
 """Defines several Google Drive doctypes"""
+import os
+import subprocess
 import logging
 import datetime
+import pypandoc
 from dateutil.parser import parse
 from apiclient.discovery import build
 from httplib2 import Http
@@ -16,22 +19,17 @@ logger = logging.getLogger(__name__)
 
 def get_gdrive_service(token_path):
     """
-    This requires that the user download credentials.json
-    from Google Cloud Console (API section).
+    This requires that the operator do the following:
 
-    The user should set client_secret_file to that JSON file,
-    probably named client_secret.json, that contains the
-    application's public and private authentication token.
-    These tokens are APPLICATION specific.
+    - Download client_secrets.json from API section of Google CLoud Console
+    - Run scripts/prepare_gdrive.py to convert client_secrets.json to credentials.json
+      (requires a one-time interactive login step)
+    - Put the credentials.json file in the path specified in the centillion config file
 
-    The authentication process uses these credentials to ask for
-    an OAuth token on behalf of the user. This step requires the
-    user to log in, and when they do it creates credentials.json.
-    These contain the credentials to perform actions as the user
-    that just logged in/granted permission to your app.
+    Then token_path above should be set to the path of credentials.json
     """
     SCOPES = 'https://www.googleapis.com/auth/drive.metadata.readonly'
-    store = file.Storage(gdrive_token_path)
+    store = file.Storage(token_path)
     creds = store.get()
     if not creds or creds.invalid:
         raise Exception("Error: invalid or missing Google Drive API credentials")
@@ -64,10 +62,13 @@ class GDriveBaseDoctype(Doctype):
         Constructor uses name to get GDrive credentials.
         """
         self.name = args[0]
-        self.token_path = Config.get_gdrive_token_path(self.name)
+        config = Config.get_doctypes_config(self.name)
+        self.token_path = config['token_path']
         self.validate_credentials(self.token_path)
 
     def validate_credentials(self, token_path):
+        if not os.path.exists(token_path):
+            raise Exception("Error: Google Drive token path does not exist: {token_path}")
         if self.drive == None:
             self.drive = get_gdrive_service(token_path)
 
@@ -194,24 +195,9 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         """
         # uses get method: https://developers.google.com/drive/api/v3/reference/files/get
         item = driveService.files().get(doc_id)
-
         content = self._extract_docx_content(item)
-
-        doc = dict(
-            id = doc_id,
-            fingerprint = item['md5Checksum'],
-            kind = self.doctype,
-            created_time = dateutil.parser.parse(item['createdTime']),
-            modified_time = dateutil.parser.parse(item['modifiedTime']),
-            indexed_time = datetime.datetime.now(),
-            name = item['name'],
-            file_name = item['name'],
-            file_url = item['webViewLink'],
-            mimetype = item['mimeType'],
-            owner_email = item['owners'][0]['emailAddress'],
-            owner_name = item['owners'][0]['displayName'],
-            content = content
-        )
+        doc = super().get_by_id(doc_id)
+        doc['content'] = content
 
     def _extract_docx_content(self, item):
         content = ""
@@ -245,6 +231,10 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         else:
             infile_name  = name+'.'+file_ext
             outfile_name = name+'.'+out_ext
+
+        # Get the temporary directory, $CENTILLION_ROOT/tmp,
+        # from the config file (so everyone uses the same one)
+        temp_dir = Config.get_centillion_tmpdir()
 
         # Assemble input/output file paths
         fullpath_input = os.path.join(temp_dir,infile_name)
@@ -281,10 +271,10 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         clean_in_cmd = ['rm','-fr',fullpath_input]
         clean_out_cmd = ['rm','-fr',fullpath_output]
 
-        logging.inf(" ".join(clean_in_cmd))
+        logger.info(" > " + " ".join(clean_in_cmd))
         subprocess.call(clean_in_cmd)
 
-        loggoutg.outf(" ".joout(clean_out_cmd))
+        logger.info(" > " + " ".joout(clean_out_cmd))
         subprocess.call(clean_out_cmd)
 
         return content
