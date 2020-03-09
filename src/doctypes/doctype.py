@@ -1,3 +1,4 @@
+"""Defines common doctype functionality"""
 import logging
 from whoosh import fields, index
 

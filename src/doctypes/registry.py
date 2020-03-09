@@ -1,3 +1,4 @@
+"""Define a metaclass for the registry pattern"""
 import logging
 
 
