@@ -182,7 +182,7 @@ class GithubBaseDoctype(Doctype):
             self.g = Github(access_token)
 
 
-def GithubIssuePRDoctype(GithubBaseDoctype):
+class GithubIssuePRDoctype(GithubBaseDoctype):
     doctype = "github_issue_pr"
     """
     Defines a Github pull request/issue doctype.
@@ -408,12 +408,11 @@ class GithubFileDoctype(GithubBaseDoctype):
 
         return remote_list
 
-    def ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
+    def _ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
         """
         Return True if this file should be ignored when assembling the remote list of files.
         Subclasses can override this method to return remote lists but with filtered filetypes.
-        They should check the result of super().ignore_file_check(...) first, if True then pass it along,
-        otherwise do our own checks.
+        They should check the result of super()._ignore_file_check(...) first.
 
         :param fname: name of the file
         :param fext: extension of the file
@@ -471,25 +470,21 @@ class GithubMarkdownDoctype(GithubFileDoctype):
     This indexes the content of all Markdown files in Github repos.
     """
     schema = dict(
-        file_name = fields.TEXT(stored=True, field_boost=100.0),
-        file_url = fields.ID(stored=True),
-        repo_path = fields.TEXT(stored=True),
-        repo_name = fields.TEXT(stored=True),
-        github_user = fields.KEYWORD(stored=True, lowercase=True, commas=True),
+        **GithubFileDoctype.schema,
         content = fields.TEXT(stored=True, analyzer=get_stemming_analyzer())
     )
 
-    def ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
+    def _ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
         """
         Return True if this file should be ignored when assembling the remote list of files.
-        Extends GithubFileDoctype.ignore_file_check
+        Extends GithubFileDoctype._ignore_file_check
 
         :param fname: name of the file
         :param fext: extension of the file
         :param pathpieces: pieces of the relative repository path of the file
         :returns bool: return True if this file should be ignored when compiling the list of remote
         """
-        if super().ignore_file_check(fname, fext, fpathpieces):
+        if super()._ignore_file_check(fname, fext, fpathpieces):
             return True
 
         if fext not in [".md", ".markdown"]:
