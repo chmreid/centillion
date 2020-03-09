@@ -58,6 +58,7 @@ class Config(object):
 
     _FOO: typing.Optional[str] = None
     _BAR: typing.Optional[str] = None
+    _DOCTYPES_LIST: typing.Optional[typing.List[str]] = None
 
     @classmethod
     def get_foo_var(cls) -> str:
@@ -72,3 +73,14 @@ class Config(object):
         if cls._BAR is None:
             cls._BAR = get_required_env_var('BAR')
         return cls._BAR
+
+    @classmethod
+    def get_doctypes(cls) -> typing.List[str]:
+        """Return a list of all doctypes being indexed by centillion."""
+        if cls._DOCTYPES_LIST is None:
+            doctypes = set()
+            doctypes_config = self._CONFIG['doctypes']
+            for cred in doctypes_config:
+                doctypes.add(cred['doctype'])
+            cls._DOCTYPES_LIST = list(doctypes).sort()
+        return cls._DOCTYPES_LIST
