@@ -175,7 +175,7 @@ class GithubBaseDoctype(Doctype):
         """
         self.name = args[0]
         self.access_token = Config.get_github_access_token(self.name)
-        self.validate_credentials(access_token)
+        self.validate_credentials(self.access_token)
 
     def validate_credentials(self, access_token):
         if self.g == None:
