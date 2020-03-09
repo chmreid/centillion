@@ -8,6 +8,7 @@ from dateutil.parser import parse
 from apiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file, client, tools
+from . import get_stemming_analyzer
 
 
 logger = logging.getLogger(__name__)
@@ -177,7 +178,7 @@ class GDriveDocxDoctype(GDriveFileDoctype):
     """
     schema = dict(
         **GDriveFileDoctype.schema,
-        content = fields.TEXT(stored=True)
+        content = fields.TEXT(stored=True, analyzer=get_stemming_analyzer())
     )
 
     def _ignore_file_check(self, fname):
