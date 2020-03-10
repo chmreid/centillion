@@ -11,7 +11,9 @@ class DoctypeRegistry(type):
     register their subclass types in a single
     global registry.
     """
+
     REGISTRY = {}
+
     def __new__(cls, name, bases, attrs):
         new_cls = type.__new__(cls, name, bases, attrs)
         try:
