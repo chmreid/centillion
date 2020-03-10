@@ -1,12 +1,18 @@
 """Defines several Github doctypes"""
+import os
+import re
 import logging
 import typing
-import re
+import requests
 import base64
 import datetime
+from whoosh import fields
 from urllib.parse import urlparse
 from github import Github, GithubException
+
 from . import get_stemming_analyzer
+from .doctype import Doctype
+from ..config import Config
 
 
 logger = logging.getLogger(__name__)
@@ -52,7 +58,7 @@ def get_repo_branch_from_file_url(gh_url: str) -> typing.Tuple[str, str]:
     path_pieces = p.path.split("/")
     repo_name = "/".join(path_pieces[1:3])
     branch_name = path_pieces[4]
-    reepopath = "/".join(path_pieces[5:])
+    repo_path = "/".join(path_pieces[5:])
     return (repo_name, branch_name, repo_path)
 
 
@@ -116,10 +122,10 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
         logger.debug(f"Adding repositories for Github org {this_org}...")
         try:
             org = g.get_organization(this_org)
-        except:
+        except GithubException:
             try:
                 org = g.get_user(this_org)
-            except:
+            except GithubException:
                 err = f"Error: could not gain access to Github org/user {this_org}"
                 raise Exception(err)
         repos = org.get_repos()
@@ -129,7 +135,7 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
             repos_list.append(repo.full_name)
 
     # Get list of repos from config repos
-    repos = Config.get_github_repos(self.name)
+    repos = Config.get_github_repos(name)
     logger.debug(f"Adding repositories...")
     for _, r in enumerate(repos):
         if "/" not in r:
@@ -138,11 +144,11 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
         try:
             org = g.get_organization(this_org)
             repo = org.get_repo(this_repo)
-        except:
+        except GithubException:
             try:
                 user = g.get_user(this_org)
-                repo = org.get_repo(this_repo)
-            except:
+                repo = user.get_repo(this_repo)
+            except GithubException:
                 err = f"Error: could not gain access to repo {this_org}/{this_repo}"
                 raise Exception(err)
 
@@ -186,7 +192,7 @@ class GithubBaseDoctype(Doctype):
         self.validate_credentials(self.access_token)
 
     def validate_credentials(self, access_token):
-        if self.g == None:
+        if self.g is None:
             self.g = Github(access_token)
 
 
@@ -228,7 +234,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         remote_list = []
 
         # Iterate over each repo and store all keys + modified date
-        repos_list = get_repos_list(name, g)
+        repos_list = get_github_repos_list(name, g)
         for repo_name in repos_list:
             repo = g.get_repo(repo_name)
 
@@ -250,9 +256,6 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         (Github URL for all Github doctypes), and return an
         item to the search index matching the index schema.
         """
-        msg = f"Indexing issue {repo_name}#{number}"
-        logger.info(msg)
-
         g = self.g
 
         # Get repo reference
@@ -261,7 +264,10 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
 
         # Get issue/PR reference (get_issue and get_pull are interchangeable!)
         number = get_issue_pr_no_from_url(doc_id)
-        item = g.get_pull(number)
+        item = repo.get_pull(number)
+
+        msg = f"Indexing issue {repo_name}#{number}"
+        logger.info(msg)
 
         user_list = self._extract_issue_pr_user_list(item)
         content = self._extract_issue_pr_content(item)
@@ -336,7 +342,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
                     except AttributeError:
                         pass
             except GithubException:
-                err = f"Error: could not get comments for issue/PR {repo_name}#{number}"
+                err = f"Error: could not get comments for issue/PR"
                 logger.error(err)
                 pass
 
@@ -374,7 +380,7 @@ class GithubFileDoctype(GithubBaseDoctype):
         # Return value: list of (last_modified_date, file_url) tuples
         remote_list = []
 
-        repos_list = get_repos_list(self.name, self.g)
+        repos_list = get_github_repos_list(name, g)
         for repo_name in repos_list:
             repo = g.get_repo(repo_name)
 
@@ -384,7 +390,8 @@ class GithubFileDoctype(GithubBaseDoctype):
             # To iterate over all files, we need a git tree, which requires a commit reference.
             # Get head commit of default branch
             try:
-                default_branch = repo.get_branch(repo.default_branch)
+                branch_name = repo.default_branch
+                default_branch = repo.get_branch(branch_name)
                 head_commit = default_branch.commit
                 sha = head_commit.sha
             except GithubException:
@@ -397,11 +404,11 @@ class GithubFileDoctype(GithubBaseDoctype):
             # Get all the docs
             tree = repo.get_git_tree(sha=sha, recursive=True)
             docs = tree.raw_data["tree"]
-            msg = "Parsing file ids from repository %s" % (r)
+            msg = "Parsing file ids from repository %s" % (repo_name)
             logger.info(msg)
             for item in docs:
                 # Split document path into its useful parts
-                fpath = d["path"]
+                fpath = item["path"]
                 _, fname = os.path.split(fpath)
                 _, fext = os.path.splitext(fpath)
                 fpathpieces = fpath.split("/")
@@ -446,13 +453,10 @@ class GithubFileDoctype(GithubBaseDoctype):
         """
         # Extract labels from URL
         repo_name, branch_name, repo_path = get_repo_branch_from_file_url(doc_id)
+        file_name = repo_path.split("/")[-1]
 
         # Get PyGithub objects from labels
         repo, branch, head_commit = get_pygithub_branch_refs(repo_name, branch_name, self.g)
-
-        # Convenience
-        g = self.g
-        file_name = repo_path.split("/")[-1]
 
         msg = f"Indexing file {repo_path} in repo {repo_name}"
         logger.info(msg)
@@ -467,7 +471,7 @@ class GithubFileDoctype(GithubBaseDoctype):
             file_name=file_name,
             file_url=doc_id,
             repo_path=repo_path,
-            github_user=head_commit.author.login,
+            github_user=head_commit.commit.author.login,
         )
 
         return doc
@@ -509,24 +513,19 @@ class GithubMarkdownDoctype(GithubFileDoctype):
         """
         # Extract labels from URL
         repo_name, branch_name, repo_path = get_repo_branch_from_file_url(doc_id)
+        file_name = repo_path.split("/")[-1]
 
         # Get PyGithub objects from labels
         repo, _, head_commit = get_pygithub_branch_refs(repo_name, branch_name, self.g)
 
-        # Convenience
-        g = self.g
-        file_name = repo_path.split("/")[-1]
-
         msg = f"Indexing Markdown file {repo_path} in repo {repo_name}"
         logger.info(msg)
-
-        markdown_user_list = head_commit.author.login
 
         content = self._extract_markdown_content(repo, head_commit, repo_path)
 
         doc = dict(
             id=doc_id,
-            fingerprint=sha,
+            fingerprint=head_commit.sha,
             kind=self.doctype,
             created_time=None,
             modified_time=head_commit.commit.author.date,
@@ -535,7 +534,8 @@ class GithubMarkdownDoctype(GithubFileDoctype):
             file_name=file_name,
             file_url=doc_id,
             repo_path=repo_path,
-            github_user=head_commit.author.login,
+            github_user=head_commit.commit.author.login,
+            content=content,
         )
 
         return doc
@@ -551,6 +551,7 @@ class GithubMarkdownDoctype(GithubFileDoctype):
         content = ""
 
         # Get a reference to the tree to get a list of files + URLs to access their contents
+        repo_name = repo.full_name
         sha = head_commit.sha
         tree = repo.get_git_tree(sha=sha, recursive=True)
         docs = tree.raw_data["tree"]
@@ -561,14 +562,14 @@ class GithubMarkdownDoctype(GithubFileDoctype):
             if d["path"] == repo_path:
                 doc = d
         if doc is None:
-            err = f"Error: No file found matching {path} in repo {repo.full_name} commit {sha}."
+            err = f"Error: No file found matching {repo_path} in repo {repo_name} commit {sha}."
             logger.error(err)
             return content
 
         # The API URL will be a JSON document whose "content" field has the document contents.
         # Make a request to the API URL and decode the result. Include headers for private repos!
         # Useful: https://bit.ly/2LSAflS
-        headers = {"Authorization": "token %s" % (gh_token)}
+        headers = {"Authorization": "token %s" % (self.access_token)}
         url = doc["url"]
         response = requests.get(url, headers=headers)
         if response.status_code == 200:

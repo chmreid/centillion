@@ -1,6 +1,8 @@
 """Defines doctype functionality"""
 import logging
-from whoosh import fields, index
+from whoosh import fields
+
+from .registry import DoctypeRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -35,8 +37,9 @@ class Doctype(metaclass=DoctypeRegistry):
     def __init__(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def _not_implemented(self, meth):
-        msg = f"Error: {meth}() not implemented for document type {self.__class__.__name}"
+    @classmethod
+    def _not_implemented(cls, meth):
+        msg = f"Error: {meth}() not implemented for document type {cls.__name__}"
         raise NotImplementedError(msg)
 
     def validate_credentials(self):
@@ -66,9 +69,6 @@ class Doctype(metaclass=DoctypeRegistry):
         logger.debug("Fetching class doctype")
         return cls.doctype
 
-    def sync(self):
-        self._not_implemented("sync")
-
     @classmethod
     def search_result_template(cls):
-        self._not_implemented("search_result_template")
+        cls._not_implemented("search_result_template")

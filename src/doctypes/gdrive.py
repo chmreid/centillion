@@ -1,14 +1,22 @@
 """Defines several Google Drive doctypes"""
 import os
+import re
+import codecs
+import pypandoc
+import requests
 import subprocess
+import typing
 import logging
 import datetime
-import pypandoc
-from dateutil.parser import parse
+import dateutil.parser
+from whoosh import fields
 from apiclient.discovery import build
 from httplib2 import Http
-from oauth2client import file, client, tools
+from oauth2client import file
+
 from . import get_stemming_analyzer
+from .doctype import Doctype
+from ..config import Config
 
 
 logger = logging.getLogger(__name__)
@@ -30,7 +38,6 @@ def get_gdrive_service(token_path):
 
     Then token_path above should be set to the path of credentials.json
     """
-    SCOPES = "https://www.googleapis.com/auth/drive.metadata.readonly"
     store = file.Storage(token_path)
     creds = store.get()
     if not creds or creds.invalid:
@@ -72,7 +79,7 @@ class GDriveBaseDoctype(Doctype):
     def validate_credentials(self, token_path):
         if not os.path.exists(token_path):
             raise Exception("Error: Google Drive token path does not exist: {token_path}")
-        if self.drive == None:
+        if self.drive is None:
             self.drive = get_gdrive_service(token_path)
 
 
@@ -101,7 +108,6 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         :returns: list of (last_modified_date, gdrive id) tuples
                   (types are datetime.datetime and str)
         """
-        name = self.name
         drive = self.drive
 
         # Return value: list of (last_modified_date, gdrive_id) tuples
@@ -128,7 +134,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
                 ignore_file = self._ignore_file_check(fname)
                 if not ignore_file:
                     key = fid
-                    date = dateutil.parser.parse(item["modifiedTime"])
+                    date = dateutil.parser.parse(f["modifiedTime"])
                     remote_list.append((date, key))
 
         return remote_list
@@ -139,7 +145,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         an item to the search index matching the index schema.
         """
         # uses get method: https://developers.google.com/drive/api/v3/reference/files/get
-        item = driveService.files().get(doc_id)
+        item = self.drive.files().get(doc_id)
 
         doc = dict(
             id=doc_id,
@@ -194,18 +200,18 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         """
         Retrieve a remote docx document given its id.
         Use markdown to extract the text contents of the doc.
-        Assemble and return an item to the search index 
+        Assemble and return an item to the search index
         matching the search index schema.
         """
         # uses get method: https://developers.google.com/drive/api/v3/reference/files/get
-        item = driveService.files().get(doc_id)
+        item = self.drive.files().get(doc_id)
         content = self._extract_docx_content(item)
         doc = super().get_by_id(doc_id)
         doc["content"] = content
 
     def _extract_docx_content(self, item):
         content = ""
-        mimetype = re.split("[/\.]", item["mimeType"])[-1]
+        mimetype = re.split(r'[/\.]', item["mimeType"])[-1]
         mimemap = {"document": "docx"}
         if mimetype not in mimemap.keys():
             # Not a document - just a file
@@ -277,7 +283,7 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         logger.info(" > " + " ".join(clean_in_cmd))
         subprocess.call(clean_in_cmd)
 
-        logger.info(" > " + " ".joout(clean_out_cmd))
+        logger.info(" > " + " ".join(clean_out_cmd))
         subprocess.call(clean_out_cmd)
 
         return content
