@@ -3,6 +3,9 @@ import typing
 from enum import Enum, auto
 
 
+TMPDIR_NAME = 'tmp'
+
+
 class Config(object):
     """
     Singleton class to allow uniform access to centillion configuration.
@@ -30,10 +33,9 @@ class Config(object):
         assert os.path.exists(config_file)
 
         # Use singleton pattern to store config file location/load config once
-        if not Config._CONFIG:
-            Config._CONFIG_FILE = config_file
-            with open(config_file, 'r') as f:
-                Config._CONFIG = json.load(f)
+        Config._CONFIG_FILE = config_file
+        with open(config_file, 'r') as f:
+            Config._CONFIG = json.load(f)
 
     @staticmethod
     def get_required_env_var(envvar: str) -> str:
@@ -90,7 +92,7 @@ class Config(object):
     def get_centillion_tmpdir(cls) -> str:
         if cls._CENTILLION_TMPDIR is None:
             centillion_root = Config.get_centillion_root()
-            temp_dir = os.path.join(centillion_root, 'tmp')
+            temp_dir = os.path.join(centillion_root, TMPDIR_NAME)
             if not os.path.exists(temp_dir):
                 subprocess.call(['mkdir', '-p', temp_dir])
         return cls._CENTILLION_TMPDIR
