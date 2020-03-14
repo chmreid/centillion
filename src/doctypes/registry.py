@@ -1,4 +1,5 @@
 """Define a metaclass for the registry pattern"""
+import typing
 import logging
 
 
@@ -11,7 +12,9 @@ class DoctypeRegistry(type):
     register their subclass types in a single
     global registry.
     """
-    REGISTRY = {}
+
+    REGISTRY: typing.Dict[str, typing.Any] = {}
+
     def __new__(cls, name, bases, attrs):
         new_cls = type.__new__(cls, name, bases, attrs)
         try:
@@ -20,6 +23,7 @@ class DoctypeRegistry(type):
             new_name = new_cls.__name__
             logger.warn(f"Class attribute doctype not defined for {new_name}")
         cls.REGISTRY[new_name] = new_cls
+        return new_cls
 
     @classmethod
     def get_registry(cls):

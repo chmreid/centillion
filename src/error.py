@@ -12,20 +12,33 @@ logger = logging.getLogger(__name__)
 
 
 class CentillionException(Exception):
+    """A base class for raising Flask-friendly exceptions from centillion"""
+
     def __init__(self, status: int, code: str, title: str, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)  # type: ignore
+        super().__init__(title)  # type: ignore
         self.status = status
         self.code = code
         self.message = title
 
 
-class CentillionForbiddenException(DSSException):
-    def __init__(self, title: str = "User is not authorized to access this resource",
-                 *args, **kwargs) -> None:
-        super().__init__(requests.codes.forbidden,
-                         "Forbidden",
-                         title,
-                         *args, **kwargs)
+class CentillionConfigException(CentillionException):
+    """
+    Configuration exception class, raised by Config class.
+    """
+
+    def __init__(self, title: str = "Error: the centillion configuration file has a problem", *args, **kwargs) -> None:
+        super().__init__(
+            requests.codes.internal_server_error, "Configuration Error", title, *args, **kwargs
+        )
+
+
+class CentillionForbiddenException(CentillionException):
+    """
+    Forbidden exception class, raised by Flask auth layer.
+    """
+
+    def __init__(self, title: str = "User not authorized", *args, **kwargs) -> None:
+        super().__init__(requests.codes.forbidden, "Forbidden", title, *args, **kwargs)
 
 
 def centillion_exception_handler(e: CentillionException) -> FlaskResponse:
@@ -43,13 +56,15 @@ def centillion_exception_handler(e: CentillionException) -> FlaskResponse:
         status=e.status,
         mimetype="application/problem+json",
         content_type="application/problem+json",
-        response=json.dumps({
-            'status': e.status,
-            'code': e.code,
-            'title': e.message,
-            'stacktrace': traceback.format_exc(),
-        }))
-
+        response=json.dumps(
+            {
+                "status": e.status,
+                "code": e.code,
+                "title": e.message,
+                "stacktrace": traceback.format_exc(),
+            }
+        ),
+    )
 
 
 def centillion_handler(func):
@@ -57,6 +72,7 @@ def centillion_handler(func):
     Generally, each route handler should be decorated with @centillion_handler, which manages exceptions.
     Handlers that are not decorated are returned to app.common_error_handler(Exception).
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         method, path = request.method, request.path
@@ -78,4 +94,6 @@ def centillion_handler(func):
             title = str(ex)
             stacktrace = traceback.format_exc()
         headers = None
-        logger.error(json.dumps(dict(status=status, code=code, title=title, stacktrace=stacktrace), indent=4))
+        logger.error(
+            json.dumps(dict(status=status, code=code, title=title, stacktrace=stacktrace), indent=4)
+        )

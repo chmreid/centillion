@@ -1,8 +1,5 @@
-# registry contains metaclass
-from .registry import DoctypeRegistry
+from whoosh.analysis import StemmingAnalyzer, LowercaseFilter  # StopFilter
 
-# doctype contains base class
-from .doctype import Doctype
 
 def get_stemming_analyzer():
     stemming_analyzer = StemmingAnalyzer() | LowercaseFilter()

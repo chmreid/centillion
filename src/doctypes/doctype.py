@@ -1,6 +1,9 @@
-"""Defines common doctype functionality"""
+"""Defines doctype functionality"""
 import logging
-from whoosh import fields, index
+import typing
+from whoosh import fields
+
+from .registry import DoctypeRegistry
 
 
 logger = logging.getLogger(__name__)
@@ -22,31 +25,32 @@ class Doctype(metaclass=DoctypeRegistry):
     - search result template (static method): render a search result of this doctype
     """
     common_schema = dict(
-        id = fields.ID(stored=True, unique=True),
-        fingerprint = fields.ID(stored=True),
-        kind = fields.ID(stored=True),
-        created_time = fields.DATETIME(stored=True),
-        modified_time = fields.DATETIME(stored=True),
-        indexed_time = fields.DATETIME(stored=True),
-        name = fields.TEXT(stored=True, field_boost=100.0),
+        id=fields.ID(stored=True, unique=True),
+        fingerprint=fields.ID(stored=True),
+        kind=fields.ID(stored=True),
+        created_time=fields.DATETIME(stored=True),
+        modified_time=fields.DATETIME(stored=True),
+        indexed_time=fields.DATETIME(stored=True),
+        name=fields.TEXT(stored=True, field_boost=100.0),
     )
-    schema = dict()
+    schema: typing.Dict[str, typing.Any] = dict()
 
-    def __init__(self, *args, *kwargs):
+    def __init__(self, *args, **kwargs):
         raise NotImplementedError()
 
-    def _not_implemented(self, meth):
-        msg = f"Error: {meth}() not implemented for document type {self.__class__.__name}"
+    @classmethod
+    def _not_implemented(cls, meth):
+        msg = f"Error: {meth}() not implemented for document type {cls.__name__}"
         raise NotImplementedError(msg)
 
     def validate_credentials(self):
-        self._not_implemented('validate_credentials')
+        self._not_implemented("validate_credentials")
 
     def get_remote_list(self):
-        self._not_implemented('get_remote_list')
+        self._not_implemented("get_remote_list")
 
     def get_by_id(self):
-        self._not_implemented('get_by_id')
+        self._not_implemented("get_by_id")
 
     @classmethod
     def get_common_schema(cls):
@@ -66,9 +70,6 @@ class Doctype(metaclass=DoctypeRegistry):
         logger.debug("Fetching class doctype")
         return cls.doctype
 
-    def sync(self):
-        self._not_implemented('sync')
-
     @classmethod
     def search_result_template(cls):
-        self._not_implemented('search_result_template')
+        cls._not_implemented("search_result_template")
