@@ -1,5 +1,6 @@
 """Defines doctype functionality"""
 import logging
+import typing
 from whoosh import fields
 
 from .registry import DoctypeRegistry
@@ -32,7 +33,7 @@ class Doctype(metaclass=DoctypeRegistry):
         indexed_time=fields.DATETIME(stored=True),
         name=fields.TEXT(stored=True, field_boost=100.0),
     )
-    schema = dict()
+    schema: typing.Dict[str, typing.Any] = dict()
 
     def __init__(self, *args, **kwargs):
         raise NotImplementedError()

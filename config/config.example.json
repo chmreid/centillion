@@ -1,0 +1,43 @@
+{
+    "centillion_root": "/tmp",
+    "doctypes": [
+        {
+            "name": "foobar",
+            "doctype": "github_issue_pr",
+            "access_token": "XXX",
+            "orgs": ["baz"],
+            "repos": [
+                "foobar/fuzwuz",
+                "foobar/wuznuz"
+            ]
+        },
+        {
+            "name": "goobar",
+            "doctype": "github_file",
+            "access_token": "XXX",
+            "repos": [
+                "goobar/moop",
+                "goobar/boop"
+            ]
+        },
+        {
+            "name": "roobar",
+            "doctype": "github_markdown",
+            "access_token": "YYY",
+            "repos": [
+                "roobar/fazwaz",
+                "roobar/snugmug"
+            ]
+        },
+        {
+            "name": "plinkfile",
+            "doctype": "gdrive_file",
+            "token_path": "config.json"
+        },
+        {
+            "name": "plinkdocx",
+            "doctype": "gdrive_docx",
+            "token_path": "config.json"
+        }
+    ]
+}

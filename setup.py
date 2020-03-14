@@ -23,13 +23,11 @@ config = {
     'tests_require': ['nose'],
     'packages': [
         'centillion',
-        'centillion.webapp',
-        'centillion.search',
+        'centillion.doctypes'
     ],
     'package_dir' : {
-        'centillion' :        'src',
-        'centillion.webapp' : 'src/webapp',
-        'centillion.search' : 'src/search',
+        'centillion' : 'src',
+        'centillion.doctypes' : 'src/doctypes'
     },
     'scripts': [],
     'zip_safe' : False
