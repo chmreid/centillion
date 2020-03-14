@@ -1,10 +1,10 @@
 include common.mk
-MODULES=src tests
+MODULES=src/doctypes tests
 
 all: test
 
 lint:
-	flake8 $(MODULES) chalice/*.py daemons/*/*.py
+	flake8 $(MODULES)
 
 mypy:
 	mypy --ignore-missing-imports --no-strict-optional $(MODULES)

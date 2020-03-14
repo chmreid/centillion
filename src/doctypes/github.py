@@ -13,6 +13,7 @@ from github import Github, GithubException
 from . import get_stemming_analyzer
 from .doctype import Doctype
 from ..config import Config
+from ..error import CentillionConfigException
 
 
 logger = logging.getLogger(__name__)
@@ -47,7 +48,7 @@ def convert_gh_file_html_url_to_raw_url(gh_file_html_url: str) -> str:
     return u
 
 
-def get_repo_branch_from_file_url(gh_url: str) -> typing.Tuple[str, str]:
+def get_repo_branch_from_file_url(gh_url: str) -> typing.Tuple[str, str, str]:
     """
     Extract the full repo name, branch name, and repo path from a Github file HTML URL.
 
@@ -85,6 +86,7 @@ def get_issue_pr_no_from_url(gh_url: str) -> int:
     p = urlparse(gh_url)
     path_pieces = p.path.split("/")
     number = int(path_pieces[-1])
+    assert number > 0
     return number
 
 
@@ -116,8 +118,17 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
     """
     repos_list = []
 
+    def _get_config_github_orgs(config):
+        """Extract the list of github orgs from a config credentials section"""
+        return config['orgs']
+
+    def _get_config_github_repos(config):
+        """Extract the list of github repos from a config credentials section"""
+        return config['repos']
+
     # Get list of repos for config orgs
-    orgs = Config.get_github_orgs(name)
+    config = Config.get_doctype_config(name)
+    orgs = _get_config_github_orgs(config)
     for _, this_org in enumerate(orgs):
         logger.debug(f"Adding repositories for Github org {this_org}...")
         try:
@@ -135,7 +146,7 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
             repos_list.append(repo.full_name)
 
     # Get list of repos from config repos
-    repos = Config.get_github_repos(name)
+    repos = _get_config_github_repos(name)
     logger.debug(f"Adding repositories...")
     for _, r in enumerate(repos):
         if "/" not in r:
@@ -163,16 +174,13 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
 # Doctype classes
 #################
 
-
 class GithubBaseDoctype(Doctype):
     doctype = "github_base"
     """
     Defines a base Github document type.
-
     All GithubBaseDoctype subclasses will use
     the same kind of API instance, so we have a
     common validation method, etc.
-
     This base class only defines:
     - constructor
     - validate credentials
@@ -183,12 +191,17 @@ class GithubBaseDoctype(Doctype):
     def __init__(self, *args, **kwargs):
         """
         Constructor is only passed the name of the credentials.
-
         Constructor uses name to get Github credentials, and all other
         options set in the Config file for this set of credentials.
         """
         self.name = args[0]
-        self.access_token = Config.get_github_access_token(self.name)
+        doctype_config = Config.get_doctype_config(self.name)
+        try:
+            self.access_token = doctype_config['access_token']
+        except KeyError:
+            raise CentillionConfigException(
+                f"Error: {self.doctype} credentials section does not contain access_token"
+            )
         self.validate_credentials(self.access_token)
 
     def validate_credentials(self, access_token):
@@ -256,14 +269,20 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         (Github URL for all Github doctypes), and return an
         item to the search index matching the index schema.
         """
+        name = self.name
         g = self.g
 
         # Get repo reference
         repo_name = get_repo_name_from_url(doc_id)
-        repo = g.get_repo(repo_name)
+
+        # Verify this is in the config file list of repos
+        repos_list = get_github_repos_list(name, g)
+        if repo_name not in repos_list:
+            raise CentillionConfigException(f"Error: Repo {repo_name} not listed in config section {self.name}")
 
         # Get issue/PR reference (get_issue and get_pull are interchangeable!)
         number = get_issue_pr_no_from_url(doc_id)
+        repo = g.get_repo(repo_name)
         item = repo.get_pull(number)
 
         msg = f"Indexing issue {repo_name}#{number}"
@@ -451,12 +470,20 @@ class GithubFileDoctype(GithubBaseDoctype):
         Retrieve a remote document given its id, and return
         an item to the search index matching the index schema.
         """
+        name = self.name
+        g = self.g
+
         # Extract labels from URL
         repo_name, branch_name, repo_path = get_repo_branch_from_file_url(doc_id)
         file_name = repo_path.split("/")[-1]
 
+        # Verify this is in the config file list of repos
+        repos_list = get_github_repos_list(name, g)
+        if repo_name not in repos_list:
+            raise CentillionConfigException(f"Error: Repo {repo_name} not listed in config section {self.name}")
+
         # Get PyGithub objects from labels
-        repo, branch, head_commit = get_pygithub_branch_refs(repo_name, branch_name, self.g)
+        repo, branch, head_commit = get_pygithub_branch_refs(repo_name, branch_name, g)
 
         msg = f"Indexing file {repo_path} in repo {repo_name}"
         logger.info(msg)
@@ -511,12 +538,20 @@ class GithubMarkdownDoctype(GithubFileDoctype):
         Retrieve a remote document given its id, and return
         an item to the search index matching the index schema.
         """
+        name = self.name
+        g = self.g
+
         # Extract labels from URL
         repo_name, branch_name, repo_path = get_repo_branch_from_file_url(doc_id)
         file_name = repo_path.split("/")[-1]
 
+        # Verify this is in the config file list of repos
+        repos_list = get_github_repos_list(name, g)
+        if repo_name not in repos_list:
+            raise CentillionConfigException(f"Error: Repo {repo_name} not listed in config section {self.name}")
+
         # Get PyGithub objects from labels
-        repo, _, head_commit = get_pygithub_branch_refs(repo_name, branch_name, self.g)
+        repo, _, head_commit = get_pygithub_branch_refs(repo_name, branch_name, g)
 
         msg = f"Indexing Markdown file {repo_path} in repo {repo_name}"
         logger.info(msg)

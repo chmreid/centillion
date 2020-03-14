@@ -64,7 +64,7 @@ class GDriveBaseDoctype(Doctype):
     - constructor
     - validate credentials
     """
-    drive = None
+    drive = None  # type: ignore
 
     def __init__(self, *args, **kwargs):
         """
@@ -72,13 +72,15 @@ class GDriveBaseDoctype(Doctype):
         Constructor uses name to get GDrive credentials.
         """
         self.name = args[0]
-        config = Config.get_doctypes_config(self.name)
-        self.token_path = config["token_path"]
+        config = Config.get_doctype_config(self.name)
+        # Convert path to GDrive token file to absolute path
+        tp = config['token_path']
+        self.token_path = os.path.join(os.path.abspath(Config.get_centillion_root()), tp)
         self.validate_credentials(self.token_path)
 
     def validate_credentials(self, token_path):
         if not os.path.exists(token_path):
-            raise Exception("Error: Google Drive token path does not exist: {token_path}")
+            raise Exception(f"Error: Google Drive token path does not exist: {token_path}")
         if self.drive is None:
             self.drive = get_gdrive_service(token_path)
 
@@ -119,7 +121,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         # Use the pager to return all the things
         while True:
             ps = 100
-            results = drive.list(
+            results = drive.list(  # type: ignore
                 pageSize=ps,
                 pageToken=nextPageToken,
                 fields="nextPageToken, files(id, kind, createdTime, modifiedTime, mimeType, name, owners, webViewLink)",
