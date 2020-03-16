@@ -10,13 +10,16 @@ from whoosh import fields
 from urllib.parse import urlparse
 from github import Github, GithubException
 
-from . import get_stemming_analyzer
+from .content import get_stemming_analyzer, scrub_markdown
 from .doctype import Doctype
 from ..config import Config
 from ..error import CentillionConfigException
+from ..util import SearchResult, search_results_timestamps_datetime_to_str
 
 
 logger = logging.getLogger(__name__)
+
+USER_LIST_SEP_CHAR = ", "
 
 
 ###################
@@ -46,6 +49,24 @@ def convert_gh_file_html_url_to_raw_url(gh_file_html_url: str) -> str:
     u = re.sub("github.com", "raw.githubusercontent.com", gh_file_html_url, 1)
     u = re.sub("blob/", "", u, 1)
     return u
+
+
+def convert_github_user_to_github_user_links(github_user: str) -> str:
+    """
+    Given a comma-separated list of Github users,
+    return linkified versions of each Github username.
+
+    Example Input: "monkeywrench123, tampermonkey456"
+    Example Output: "<a href='http://github.com/monkeywrench123'>@monkeywrench123</a>, ..."
+
+    :param github_user: string containing comma-separated list of Github usernames
+    :returns: string containing comma-separated, linkified Github usernames
+    """
+    github_users = [ghu.strip() for ghu in ",".split(github_user)]
+    github_user_atag_template = '<a href="https://github.com/{user}">@{user}</a>'
+    github_user_atags = [github_user_atag_template.format(user=user) for user in github_users]
+    github_user_links = ", ".join(github_user_atags)
+    return github_user_links
 
 
 def get_repo_branch_from_file_url(gh_url: str) -> typing.Tuple[str, str, str]:
@@ -90,7 +111,7 @@ def get_issue_pr_no_from_url(gh_url: str) -> int:
     return number
 
 
-def get_pygithub_branch_refs(repo_name: str, branch_name: str, g):
+def get_pygithub_branch_refs(repo_name: str, branch_name: str, g) -> typing.Tuple[typing.Any, typing.Any, typing.Any]:
     """
     Given a repo and branch name, return PyGithub objects referring to
     the repo, the branch, and the head commit of the branch, in a tuple.
@@ -120,11 +141,11 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
 
     def _get_config_github_orgs(config):
         """Extract the list of github orgs from a config credentials section"""
-        return config['orgs']
+        return config["orgs"]
 
     def _get_config_github_repos(config):
         """Extract the list of github repos from a config credentials section"""
-        return config['repos']
+        return config["repos"]
 
     # Get list of repos for config orgs
     config = Config.get_doctype_config(name)
@@ -174,6 +195,7 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
 # Doctype classes
 #################
 
+
 class GithubBaseDoctype(Doctype):
     doctype = "github_base"
     """
@@ -197,7 +219,7 @@ class GithubBaseDoctype(Doctype):
         self.name = args[0]
         doctype_config = Config.get_doctype_config(self.name)
         try:
-            self.access_token = doctype_config['access_token']
+            self.access_token = doctype_config["access_token"]
         except KeyError:
             raise CentillionConfigException(
                 f"Error: {self.doctype} credentials section does not contain access_token"
@@ -229,6 +251,92 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         github_user=fields.KEYWORD(stored=True, lowercase=True, commas=True),
         content=fields.TEXT(stored=True, analyzer=get_stemming_analyzer()),
     )
+
+    @classmethod
+    def render_search_result(cls, whoosh_search_result):
+        """
+        Process whoosh search result fields to prepare them for HTML displaying.
+        Each field is processed then put into a SearchResult instance.
+        the SearchResult instance is passed into the Jinja template (below) to display search results.
+
+        :param whoosh_search_result: a single Whoosh search result, as returned by the whoosh.search.search() function
+        :returns: a SearchResult (dot-attribute-accessible dictionary) with scrubbed search result item
+        """
+        # Turn the whoosh_search_result into something that works with Jinja template below
+        result = SearchResult()
+        for key in cls.get_common_schema():
+            result[key] = whoosh_search_result.getattr(key)
+        for key in cls.get_schema():
+            result[key] = whoosh_search_result.getattr(key)
+
+        # Parse and process datetimes into strings
+        search_results_timestamps_datetime_to_str(result)
+
+        # Parse and process contents
+        result.content = scrub_markdown(whoosh_search_result, "content")
+
+        # Parse Github users, linkify them, add the links to a github_user_links field
+        result.github_user_links = convert_github_user_to_github_user_links(result.github_user)
+
+        # Get issue/PR number
+        result.issue_pr_no = get_issue_pr_no_from_url(result.issue_url)
+
+        return result
+
+    @classmethod
+    def get_jinja_template(cls) -> str:
+        """
+        Return a string containing Jinja HTML template for rendering
+        search results of this doctype. Must match schema.
+
+        We should assume we're using some kind of SearchResult class, with attributes
+        matching the schema (unless post-processing further... github user -> github users).
+
+        Define another method to convert (input) search results into SearchResult objects.
+
+        Each template item will be placed within the following HTML:
+
+        <tr>
+          <td>
+            <ul class="list-group">
+              <li class="search-group-item">
+                {{template}}
+              </li>
+            </ul>
+          </td>
+          <td>
+            <p><small>doctype</small></p>
+          </td>
+        </tr>
+        """
+        template = """
+                <div class="url">
+                    <a class="result-title" href="{{e.url}}">{{e.repo_name}}#{{e.issue_pr_no}}: {{e.title}}</a>
+                    <br />
+                    <span class="badge kind-badge">Github Issue</span>
+                    <br />
+                    <b>Github users:</b> {{e.github_user_links}}
+                    {% endif %}
+                    <br/>
+                    <b>Repository:</b> <a href="{{e.repo_url}}">{{e.repo_name}}</a>
+                    {% if e.created_time %}
+                        <br/>
+                        <b>Created:</b> {{e.created_time}}
+                    {% endif %}
+                    {% if e.modified_time %}
+                        <br/>
+                        <b>Modified:</b> {{e.modified_time}}
+                    {% endif %}
+                </div>
+                <div class="markdown-body">
+                    {% if e.content %}
+                        {{ e.content|safe }}
+                    {% else %}
+                        <p>(A preview of this document is not available.)</p>
+                    {% endif %}
+                </div>
+        """
+        return template
 
     def get_remote_list(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
         """
@@ -278,7 +386,9 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         # Verify this is in the config file list of repos
         repos_list = get_github_repos_list(name, g)
         if repo_name not in repos_list:
-            raise CentillionConfigException(f"Error: Repo {repo_name} not listed in config section {self.name}")
+            raise CentillionConfigException(
+                f"Error: Repo {repo_name} not listed in config section {self.name}"
+            )
 
         # Get issue/PR reference (get_issue and get_pull are interchangeable!)
         number = get_issue_pr_no_from_url(doc_id)
@@ -328,7 +438,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
             except GithubException:
                 pass
 
-        return ",".join(user_list)
+        return USER_LIST_SEP_CHAR.join(user_list)
 
     def _extract_issue_pr_content(self, item) -> str:
         """
@@ -382,6 +492,56 @@ class GithubFileDoctype(GithubBaseDoctype):
         repo_name=fields.TEXT(stored=True),
         github_user=fields.KEYWORD(stored=True, lowercase=True, commas=True),
     )
+
+    @classmethod
+    def render_search_result(cls, whoosh_search_result):
+        """
+        Process whoosh search result fields to prepare them for HTML displaying.
+        """
+        # Turn the whoosh_search_result into something that works with Jinja template below
+        result = SearchResult()
+        for common_key in cls.get_common_schema():
+            result[common_key] = whoosh_search_result.getattr(common_key)
+        for gh_key in cls.get_schema():
+            result[gh_key] = whoosh_search_result.getattr(gh_key)
+
+        # Parse and process datetimes into strings
+        search_results_timestamps_datetime_to_str(result)
+
+        # Parse Github users, linkify them, add the links to a github_user_links field
+        result.github_user_links = convert_github_user_to_github_user_links(result.github_user)
+
+        return result
+
+    @classmethod
+    def get_jinja_template(cls) -> str:
+        """
+        Return a string containing Jinja HTML template for rendering
+        search results of this doctype. Must match schema.
+        """
+        template = """
+                <div class="url">
+                    <a class="result-title" href="{{e.url}}">{{e.repo_path}}</a> ({{e.repo_name}})
+                    <br />
+                    <span class="badge kind-badge">Github File</span>
+                    <br />
+                    <b>Github users:</b> {{e.github_user_links}}
+                    <br/>
+                    <b>Repository:</b> <a href="{{e.repo_url}}">{{e.repo_name}}</a>
+                    {% if e.created_time %}
+                        <br/>
+                        <b>Created:</b> {{e.created_time}}
+                    {% endif %}
+                    {% if e.modified_time %}
+                        <br/>
+                        <b>Modified:</b> {{e.modified_time}}
+                    {% endif %}
+                </div>
+                <div class="markdown-body">
+                    <p>(A preview of this document is not available.)</p>
+                </div>
+        """
+        return template
 
     def get_remote_list(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
         """
@@ -480,10 +640,16 @@ class GithubFileDoctype(GithubBaseDoctype):
         # Verify this is in the config file list of repos
         repos_list = get_github_repos_list(name, g)
         if repo_name not in repos_list:
-            raise CentillionConfigException(f"Error: Repo {repo_name} not listed in config section {self.name}")
+            raise CentillionConfigException(
+                f"Error: Repo {repo_name} not listed in config section {self.name}"
+            )
 
         # Get PyGithub objects from labels
-        repo, branch, head_commit = get_pygithub_branch_refs(repo_name, branch_name, g)
+        repo, _, head_commit = get_pygithub_branch_refs(repo_name, branch_name, g)
+
+        owner = repo.owner.login
+        last_committer = head_commit.commit.author.login
+        user_list = USER_LIST_SEP_CHAR.join(owner, last_committer)
 
         msg = f"Indexing file {repo_path} in repo {repo_name}"
         logger.info(msg)
@@ -498,7 +664,7 @@ class GithubFileDoctype(GithubBaseDoctype):
             file_name=file_name,
             file_url=doc_id,
             repo_path=repo_path,
-            github_user=head_commit.commit.author.login,
+            github_user=user_list,
         )
 
         return doc
@@ -514,6 +680,56 @@ class GithubMarkdownDoctype(GithubFileDoctype):
         **GithubFileDoctype.schema,
         content=fields.TEXT(stored=True, analyzer=get_stemming_analyzer()),
     )
+
+    @classmethod
+    def render_search_result(cls, whoosh_search_result):
+        # Turn the whoosh_search_result into something that works with Jinja template below
+        result = SearchResult()
+        for common_key in cls.get_common_schema():
+            result[common_key] = whoosh_search_result.getattr(common_key)
+        for gh_key in cls.get_schema():
+            result[gh_key] = whoosh_search_result.getattr(gh_key)
+
+        # Parse and process datetimes into strings
+        search_results_timestamps_datetime_to_str(result)
+
+        # Parse and process contents
+        result.content = scrub_markdown(whoosh_search_result, "content")
+
+        # Parse Github users, linkify them, add the links to a github_user_links field
+        result.github_user_links = convert_github_user_to_github_user_links(result.github_user)
+
+        return result
+
+    @classmethod
+    def get_jinja_template(cls) -> str:
+        template = """
+                <div class="url">
+                    <a class="result-title" href="{{e.url}}">{{e.repo_path}}</a> ({{e.repo_name}})
+                    <br />
+                    <span class="badge kind-badge">Github Markdown</span>
+                    <br />
+                    <b>Github users:</b> {{e.github_user_links}}
+                    <br/>
+                    <b>Repository:</b> <a href="{{e.repo_url}}">{{e.repo_name}}</a>
+                    {% if e.created_time %}
+                        <br/>
+                        <b>Created:</b> {{e.created_time}}
+                    {% endif %}
+                    {% if e.modified_time %}
+                        <br/>
+                        <b>Modified:</b> {{e.modified_time}}
+                    {% endif %}
+                </div>
+                <div class="markdown-body">
+                    {% if e.content %}
+                        {{ e.content|safe }}
+                    {% else %}
+                        <p>(A preview of this document is not available.)</p>
+                    {% endif %}
+                </div>
+        """
+        return template
 
     def _ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
         """
@@ -548,10 +764,16 @@ class GithubMarkdownDoctype(GithubFileDoctype):
         # Verify this is in the config file list of repos
         repos_list = get_github_repos_list(name, g)
         if repo_name not in repos_list:
-            raise CentillionConfigException(f"Error: Repo {repo_name} not listed in config section {self.name}")
+            raise CentillionConfigException(
+                f"Error: Repo {repo_name} not listed in config section {self.name}"
+            )
 
         # Get PyGithub objects from labels
         repo, _, head_commit = get_pygithub_branch_refs(repo_name, branch_name, g)
+
+        owner = repo.owner.login
+        last_committer = head_commit.commit.author.login
+        user_list = USER_LIST_SEP_CHAR.join(owner, last_committer)
 
         msg = f"Indexing Markdown file {repo_path} in repo {repo_name}"
         logger.info(msg)
@@ -569,7 +791,7 @@ class GithubMarkdownDoctype(GithubFileDoctype):
             file_name=file_name,
             file_url=doc_id,
             repo_path=repo_path,
-            github_user=head_commit.commit.author.login,
+            github_user=user_list,
             content=content,
         )
 

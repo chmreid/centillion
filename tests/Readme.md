@@ -1,48 +1,55 @@
-# centillion tests
+# Tests
 
-This directory contains tests for centillion,
-the document search engine. This uses the
-`unittest` library, and tests can be run
-with `pytest`.
+## How to Run
 
-Tests will automatically load test configuration
-files for centillion from the `tests/` directory.
+### Running All Tests
 
-We run the following tests:
+From the root of the centillion repository, run:
 
-* `test_routes.py` - create a centillion app with an
-  empty search index, and test that each of the 
-  routes created by the Flask app can be reached
-  properly.
+```
+pytest tests
+```
 
-* `test_fakedocs.py` - create a centillion app,
-  populate a search index with fake documents,
-  and run tests of a centillion instance with
-  documents in the search index.
+### Running Specific Tests
 
-* `test_gdrive.py` - requires `credentials.json` file
-  containing Google Drive API credentials; create a
-  centillion app and populate the search index with
-  files from Google Drive.
+From the root of the centillion repository, run:
 
-* `test_gh.py` - requires Github API access token to
-  be provided in conig file; create a centillion app,
-  and popualte the search index with Github files,
-  Markdown content, issues, and pull requests.
+```
+pytest tests/test_X.py
+```
 
-## Secrets for Travis
+## Standalone vs Integration Tests
 
-The strategy we use for getting API keys into Travis
-to enable tests of centillion functionality using real
-API calls is to tar anad encrypt all secret files.
+There are two kinds of tests here, standalone tests and integration tests.
 
-The file `secrets.tar.gz.enc` is an encrypted file
-that, when decrypted, contains a `secrets.tar.gz`
-file with the files:
+Standalone tests do not make any external API calls, everything is mocked
+and done locally. Real API credentials are not required.
 
-* `secrets.py` - contains API keys in varibles;
-  imported/used by test configuration files
+Integration testsmake real API calls to external APIs, so they require real
+API credentials. These tests are performed on Travis, which has an encrypted
+copy of valid API credentials for the centillion travis test account.
 
-* `credentials.json` - contains Google Drive API
-  credentials 
+## List of Tests
+
+List of tests, in logical order, and a brief description of what it tests:
+
+- `test_config.py` tests the static Config class
+
+- `test_doctypes.py` tests the base Doctype class and related utilities
+
+- `test_doctypes_github.py` tests all Github Doctype classes and related utilities
+
+- `test_doctypes_gdrive.py` tests all Google Drive Doctype classes and related utilities 
+
+## Test Support 
+
+Support for testing is provided by several modules:
+
+* `context.py` defines several useful context managers
+
+* `decorators.py` defines decorators that control how and when tests are run
+
+* `fixtures.py` defines test fixtures that are generally useful for multiple tests
+
+* `mixins.py` defines mixin classes for methods used by multiple tests
 

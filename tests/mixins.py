@@ -8,7 +8,6 @@ from centillion.doctypes.doctype import Doctype
 from .decorators import integration_test
 
 
-@integration_test
 class DoctypeTestMixin(unittest.TestCase):
     """
     Adds a check for given doctypes in a given config file.
@@ -50,7 +49,6 @@ class DoctypeTestMixin(unittest.TestCase):
                 self._action(doctype)
 
 
-@integration_test
 class ConstructorTestMixin(DoctypeTestMixin):
     """
     Adds a check for constructors of a given doctype in a given config file.
@@ -60,15 +58,18 @@ class ConstructorTestMixin(DoctypeTestMixin):
         """Let _iterate_doctypes() do all the work of calling the constructors"""
         pass
 
-    def _check_doctype_constructors(self, *args, **kwargs):
+    def check_doctype_constructors(self, *args, **kwargs):
         """
+        Iterate over each doctype in doctypes_to_check, assemble an instance of each class.
+        Then call _action() on each one (to test constructor, do nothing).
+
         :param doctypes_to_check: list of strings of doctypes to check
         :param doctypes_names_map: map of doctypes to list of names of credentials matching that doctype
         """
+        # Calls _action() on each doctype class
         self._iterate_doctypes(*args, **kwargs)
 
 
-@integration_test
 class RemoteListTestMixin(DoctypeTestMixin):
     """
     Adds a check for the remote_list function of a given doctype in a given config file.
@@ -82,34 +83,22 @@ class RemoteListTestMixin(DoctypeTestMixin):
             self.assertEqual(type(date), datetime.datetime)
             self.assertEqual(type(name), type(""))
 
-    def _check_doctype_remote_list(self, doctypes_to_check, doctypes_names_map):
+    def check_doctype_remote_list(self, *args, **kwargs):
         """
         Given a map of doctypes to credential names, get the type of each name
         and call the constructor of that class. Requires real credentials.
+
+        :param doctypes_to_check: list of strings of doctypes to check
+        :param doctypes_names_map: map of doctypes to list of names of credentials matching that doctype
         """
-        for doctype in doctypes_to_check:
-            self.assertIn(doctype, doctypes_names_map)
-            name = doctypes_names_map[doctype]
-            msg = f"Check doctype constructor for {doctype} using credentials {name}"
-            with self.subTest(msg):
-
-                # Doctype gives name, name is passed to constructor.
-                # Doctype gives class ref via registry.
-                registry = Doctype.get_registry()
-                DoctypeCls = registry[doctype]
-
-                # Make the doctype class.
-                # This step gets creds from config file and validates them.
-                doctype = DoctypeCls(name)
+        self._iterate_doctypes(*args, **kwargs)
 
 
 class SchemaTestMixin(unittest.TestCase):
     """Base class to check if schemas of related doctypes are consistent"""
 
-    def _check_consistent_schemas(self, related_doctypes):
+    def check_consistent_schemas(self, related_doctypes):
         """If two related schemas have matching keys, they should have matching value types"""
-        self.assertNotEqual(self.doctypes_names_map, None)
-
         # Generate all pairwise combinations
         for doctype, other_doctype in itertools.combinations(related_doctypes, 2):
 

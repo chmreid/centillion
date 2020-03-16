@@ -14,9 +14,10 @@ from apiclient.discovery import build
 from httplib2 import Http
 from oauth2client import file
 
-from . import get_stemming_analyzer
+from .content import get_stemming_analyzer  # scrub_markdown
 from .doctype import Doctype
 from ..config import Config
+from ..util import SearchResult, search_results_timestamps_datetime_to_str
 
 
 logger = logging.getLogger(__name__)
@@ -74,7 +75,7 @@ class GDriveBaseDoctype(Doctype):
         self.name = args[0]
         config = Config.get_doctype_config(self.name)
         # Convert path to GDrive token file to absolute path
-        tp = config['token_path']
+        tp = config["token_path"]
         self.token_path = os.path.join(os.path.abspath(Config.get_centillion_root()), tp)
         self.validate_credentials(self.token_path)
 
@@ -99,6 +100,53 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         owner_email=fields.TEXT(stored=True),
         owner_name=fields.TEXT(stored=True),
     )
+
+    @classmethod
+    def render_search_result(cls, whoosh_search_result):
+        """
+        Process whoosh search result fields to prepare them for HTML displaying.
+        """
+        # Turn the whoosh_search_result into something that works with Jinja template below
+        result = SearchResult()
+        for common_key in cls.get_common_schema():
+            result[common_key] = whoosh_search_result.getattr(common_key)
+        for gh_key in cls.get_schema():
+            result[gh_key] = whoosh_search_result.getattr(gh_key)
+
+        # Parse and process datetimes into strings
+        search_results_timestamps_datetime_to_str(result)
+
+        return result
+
+    @classmethod
+    def get_jinja_template(cls) -> str:
+        """
+        Return a string containing Jinja HTML template for rendering
+        search results of this doctype. Must match schema.
+        """
+        template = """
+                <div class="url">
+                    <a class="result-title" href="{{e.url}}">{{e.title}}</a>
+                    <br />
+                    <span class="badge kind-badge">Google Drive File</span>
+                    <br />
+                    <b>Owner:</b> {{e.owner_name}} &lt;{{e.owner_email}}&gt;
+                    <br/>
+                    <b>Repository:</b> <a href="{{e.repo_url}}">{{e.repo_name}}</a>
+                    {% if e.created_time %}
+                        <br/>
+                        <b>Created:</b> {{e.created_time}}
+                    {% endif %}
+                    {% if e.modified_time %}
+                        <br/>
+                        <b>Modified:</b> {{e.modified_time}}
+                    {% endif %}
+                </div>
+                <div class="markdown-body">
+                    <p>(A preview of this document is not available.)</p>
+                </div>
+        """
+        return template
 
     def get_remote_list(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
         """
@@ -192,6 +240,40 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         content=fields.TEXT(stored=True, analyzer=get_stemming_analyzer()),
     )
 
+    @classmethod
+    def get_jinja_template(cls) -> str:
+        """
+        Return a string containing Jinja HTML template for rendering
+        search results of this doctype. Must match schema.
+        """
+        template = """
+                <div class="url">
+                    <a class="result-title" href="{{e.url}}">{{e.title}}</a>
+                    <br />
+                    <span class="badge kind-badge">Google Document</span>
+                    <br />
+                    <b>Owner:</b> {{e.owner_name}} &lt;{{e.owner_email}}&gt;
+                    <br/>
+                    <b>Repository:</b> <a href="{{e.repo_url}}">{{e.repo_name}}</a>
+                    {% if e.mimetype %}
+                        <br />
+                        <b>Document Type</b>: {{e.mimetype}}
+                    {% endif %}
+                    {% if e.created_time %}
+                        <br/>
+                        <b>Created:</b> {{e.created_time}}
+                    {% endif %}
+                    {% if e.modified_time %}
+                        <br/>
+                        <b>Modified:</b> {{e.modified_time}}
+                    {% endif %}
+                </div>
+                <div class="markdown-body">
+                    <p>(A preview of this document is not available.)</p>
+                </div>
+        """
+        return template
+
     def _ignore_file_check(self, fname):
         fprefix, fext = os.path.splitext(fname)
         if fext not in [".docx", ".doc"]:
@@ -213,7 +295,7 @@ class GDriveDocxDoctype(GDriveFileDoctype):
 
     def _extract_docx_content(self, item):
         content = ""
-        mimetype = re.split(r'[/\.]', item["mimeType"])[-1]
+        mimetype = re.split(r"[/\.]", item["mimeType"])[-1]
         mimemap = {"document": "docx"}
         if mimetype not in mimemap.keys():
             # Not a document - just a file

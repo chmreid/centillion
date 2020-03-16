@@ -1,6 +1,6 @@
 import typing
 import unittest
-import itertools
+from unittest import mock
 from github import Github  # GithubException
 
 from centillion.config import Config
@@ -20,11 +20,14 @@ from centillion.doctypes.github import (
 )
 
 from .decorators import standalone_test, integration_test
+from .mixins import (ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin)
 
 
 # List of Github doctypes (excluding base type)
 # (Integration tests should include one credential per doctype in this list in config file)
 GITHUB_DOCTYPES = ["github_issue_pr", "github_file", "github_markdown"]
+
+# NOTE: add test repo names/branches/head commit info
 
 
 @standalone_test
@@ -75,7 +78,6 @@ class GithubDoctypeUtilsTest(unittest.TestCase):
             self.assertEqual(get_issue_pr_no_from_url(url), num)
 
 
-@integration_test
 class GithubDoctypePyGithubUtilsTest(unittest.TestCase):
     """
     Check utilities from the Github Doctype class
@@ -89,145 +91,164 @@ class GithubDoctypePyGithubUtilsTest(unittest.TestCase):
     class is all set to go.
     """
 
-    creds_name: typing.Optional[str] = None
-    g: typing.Optional[Github] = None
+    @standalone_test
+    def test_pygithub_utils_standalone(self):
+        """
+        Use (mocked) credentials to create (mocked) API instance,
+        and use it to test the PyGithub utils.
+        """
+        # Assemble a mock Github API class
+        class MockedCommit(object):
+            sha = "0000000"
 
-    @classmethod
-    def setUpClass(cls):
-        # Normally we don't access the config directly,
-        # but doing so is convenient for these tests.
-        #
-        # Note that the integration test decorator will
-        # ste the config file to the integration test
-        # config file.
-        for cred in Config._CONFIG["doctypes"]:
-            if cred["doctype"].startswith("github"):
-                # Test config should only need one github access token
-                cls.creds_name = cred["name"]
-                cls.g = Github(cred["access_token"])
-                break
+        class MockedBranch(object):
+            name = ""
+            commit = MockedCommit()
 
-    def test_pygithub_utils(self):
-        repo_name = "chmreid/centillion"
-        branch_name = "public"
+            def __init__(self, name):
+                self.name = name
 
-        # get_pygithub_branch_refs
-        (repo, branch, head_commit) = get_pygithub_branch_refs(repo_name, branch_name, self.g)
-        centillion_head_sha = "91e64330ad2881ff19253d54992ae989bc3a67ff"
-        self.assertEqual(head_commit.sha, centillion_head_sha)
+        class MockedRepo(object):
+            full_name = ""
+
+            def __init__(self, full_name):
+                self.full_name = full_name
+
+            def get_branch(self, branch_name):
+                return MockedBranch(branch_name)
+
+        class MockedGithub(object):
+            """Define a barebones mocked Github API class, with sub-mocked classes"""
+
+            def get_repo(self, repo_name):
+                return MockedRepo(repo_name)
+
+        repo_name = ""
+        branch_name = ""
+        g = MockedGithub()
+
+        # test get_pygithub_branch_refs
+        (repo, branch, head_commit) = get_pygithub_branch_refs(repo_name, branch_name, g)
+        head_sha = "0000000"
+
         self.assertEqual(repo.full_name, repo_name)
+        self.assertEqual(branch.name, branch_name)
+        self.assertEqual(head_commit.sha, head_sha)
 
-        # get_github_repos_list
-        correct_list = [repo_name]
-        repos_list = get_github_repos_list(self.creds_name, self.g)
-        self.assertEqual(repos_list, correct_list)
+    @integration_test
+    def test_pygithub_utils_integration(self):
+        """
+        Use (real) integration credentials to create (real) API instance,
+        and use it to test the PyGithub utils.
+        """
+        doctypes_names_map = Config.get_doctypes_names_map()
+        for doctype, names in doctypes_names_map.items():
+            name = names[0]
+            config = Config.get_doctype_config(name)
+            access_token = config["access_token"]
+
+            repo_name = "chmreid/centillion"
+            branch_name = "public"
+            g = Github(access_token)
+
+            # test get_pygithub_branch_refs
+            (repo, branch, head_commit) = get_pygithub_branch_refs(repo_name, branch_name, g)
+            centillion_head_sha = "91e64330ad2881ff19253d54992ae989bc3a67ff"
+
+            self.assertEqual(repo.full_name, repo_name)
+            self.assertEqual(branch.name, branch_name)
+            self.assertEqual(head_commit.sha, centillion_head_sha)
 
 
-@standalone_test
-class GithubDoctypeStandaloneTest(unittest.TestCase):
+class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin):
     """
-    Do a standalone test of Github doctypes.
-    This does not make any real API calls or require real tokens.
+    Test Github doctypes.
+
+    Note that because we switch between standalone and integration tests,
+    we shouldn't be storing many (any?) class variables shared across methods.
     """
 
-    doctypes_names_map = Config.get_doctypes_names_map()
-
+    @standalone_test
     def test_doctypes(self):
+        """Test the doctype attribute of each Github doctype"""
         self.assertEqual(GithubBaseDoctype.doctype, "github_base")
         self.assertEqual(GithubIssuePRDoctype.doctype, "github_issue_pr")
         self.assertEqual(GithubFileDoctype.doctype, "github_file")
         self.assertEqual(GithubMarkdownDoctype.doctype, "github_markdown")
 
+    @standalone_test
     def test_consistent_schemas(self):
         """Test that all Github document type schemas are consistent with one another"""
-        # Generate all pairwise combinations
-        for doctype, other_doctype in itertools.combinations(GITHUB_DOCTYPES, 2):
-            msg = f"Check doctype schemas {doctype} and {other_doctype} are consistent"
-            with self.subTest(msg):
+        self.check_consistent_schemas(GITHUB_DOCTYPES)
 
-                # Get class refs from doctype registry
-                registry = Doctype.get_registry()
-                DoctypeCls = registry[doctype]
-                OtherDoctypeCls = registry[other_doctype]
-
-                # Get credentials name
-                name = self.doctypes_names_map[doctype][0]
-                other_name = self.doctypes_names_map[other_doctype][0]
-
-                # Get schemas
-                doctype_schema = DoctypeCls(name).schema
-                other_doctype_schema = OtherDoctypeCls(other_name).schema
-
-                # Get shared keys
-                doctype_schema_keys = set(doctype_schema.keys())
-                other_doctype_schema_keys = set(other_doctype_schema.keys())
-                shared_schema_keys = doctype_schema_keys.intersection(other_doctype_schema_keys)
-
-                # Verify types of shared schema keys are consistent
-                for shared_key in shared_schema_keys:
-                    this_type = type(doctype_schema[shared_key])
-                    other_type = type(other_doctype_schema[shared_key])
-                    self.assertEqual(this_type, other_type)
-
+    @standalone_test
     def test_github_base_doctype(self):
-        # Mock centillion.doctypes.github.Github first
-        # Mock config file, fake credentials
-        # g = GithubBaseDoctype('name')
+        """Test the GithubBaseDoctype constructor, mocking the Github API creation/credentials validation step"""
+        # with mock.patch("centillion.doctypes.github.Github") as gh:
+        #     GithubBaseDoctype(name)
+        #
+        # Above assumes there is no cross-checking with config file credentials section
         pass
 
+    @integration_test
+    def test_github_doctype_constructors(self):
+        """Test the constructor of each Github doctype with (real) integration credentials"""
+        doctypes_names_map = Config.get_doctypes_names_map()
+        self.check_doctype_constructors(GITHUB_DOCTYPES, doctypes_names_map)
 
-@integration_test
-class GithubDoctypeIntegrationTest(unittest.TestCase):
-    """
-    Do an integration test of Github doctypes.
-    All API calls are real, all API tokens are for real accounts.
-    """
+    @standalone_test
+    def test_render_search_result(self):
+        doctype_classes = self._get_github_doctype_classes()
 
-    # Map of doctype labels to credential names
-    doctypes_names_map: typing.Optional[typing.Dict] = dict()
+        # Mock whoosh search result class - extend dict so you can use ['key']
+        class MockWhooshResult(dict):
+            # Any non-schema fields used?
+            pass
 
-    @classmethod
-    def setUpClass(cls):
-        # Get list of doctypes actually in config file
-        doctypes_in_config = Config.get_doctypes()
-        for doctype in GITHUB_DOCTYPES:
-            # Make sure required doctypes are in config file
-            if doctype not in doctypes_in_config:
-                raise Exception(f"Error: credentials for {doctype} not in config file")
-            # Get the creds name associated with each doctype
-            for cred in Config._Config["doctypes"]:
-                if cred["doctype"] == doctype:
-                    cls.doctypes_names_map[doctype] = cred["name"]
-                    break
+        # We are probably gonna have to hard-code one of every doctype
+        # Set each field to something sensible
+        # Pass it to render_search_result()
+        # Get back a SearchResult
 
-    def test_github_doctypes(self):
-        """Test the constructor and the get_remote_list function for each usable Github doctype"""
-        for doctype, name in self.doctypes_names_map.items():
-            # Doctype gives name, name is passed to constructor.
-            # Doctype gives class ref via registry.
-            registry = Doctype.get_registry()
-            DoctypeCls = registry[doctype]
+    @standalone_test
+    def test_get_jinja_template(self):
+        """Test the Jinja template returned by each Github doctype"""
+        # Turn a list of doctype labels into a list of doctype classes
+        doctype_classes = self._get_github_doctype_classes()
+        required_strings = ['<div class="url">', '<div class="markdown-body">']
+        for DoctypeCls in doctype_classes:
+            for required_string in required_strings:
+                self.assertIn(required_string, DoctypeCls.get_jinja_template())
 
-            # Make the doctype class.
-            # This step gets creds from config file and validates them.
-            doctype = DoctypeCls(name)
+    @standalone_test
+    def test_render_matches_jinja(self):
+        """
+        Confirm that the SearchResult object resulting from render_search_result is consistent
+        with the variables used in the Jinja template.
+        """
+        # Create a doctype instance for each registered doctype
+        # Get the jinja2schema from that doctype
+        # Use jinja2schema to extract jinja variables used in template
+        # For each attribute of search_result,
+        # Check that SearchResult has that attribute
+        pass
 
-            # get_remote_list
-            rl = doctype.get_remote_list()
-            self.assertTrue(len(rl) > 0)
-            # Note: Need to look into short-circuiting the list functionality
-            # during tests. Config class can help during tests.
-            # Or add argument to get_remote_list.
+    @integration_test
+    def test_get_remote_list(self):
+        doctypes_names_map = Config.get_doctypes_names_map()
+        self.check_doctype_remote_list(GDRIVE_DOCTYPES, doctypes_names_map)
 
-            # get_by_id (skip, requires doctype-specific implementation)
-            # get_schema (skip, check when checking get_by_id)
-
+    @integration_test
     def test_github_issues_prs(self):
-        """Test get_by_id and get_schema for GithubIssuesPRsDoctype class"""
-        name = self.doctypes_names_map["github_issue_pr"]
+        """Test the get_by_id (and get_schema) methods for the Github issue/PR doctype"""
+        this_doctype = "github_issue_pr"
+        doctypes_names_map = Config.get_doctypes_names_map()
+        name = doctypes_names_map[this_doctype]
         doctype = GithubIssuePRDoctype(name)
-        doc_id = "https://github.com/charlesreid1/centillion-search-demo/issues/1"
-        doc = doctype.get_by_id(doc_id)
+
+        # Test an issue
+        issue_id = "https://github.com/charlesreid1/centillion-search-demo/issues/1"
+        doc = doctype.get_by_id(issue_id)
         self.assertEqual(doc_id, doc["id"])
         self.assertEqual(doc_id, doc["issue_url"])
         self.assertEqual("Seattle drivers", doc["name"])
@@ -235,6 +256,29 @@ class GithubDoctypeIntegrationTest(unittest.TestCase):
         self.assertIn("charlesreid1", doc["github_user"])
         self.assertEqual("charlesreid1/centillion-search-demo", doc["repo_name"])
         self.assertIn("certain Seattle drivers", doc["content"])
+
+        # Test a pull request (TBA)
+
+    @integration_test
+    def test_github_files(self):
+        """Test the get_by_id (and get_schema) methods for the Github file doctype"""
+        pass
+
+    @integration_test
+    def test_github_markdown(self):
+        """Test the get_by_id (and get_schema) methods for the Github markdown doctype"""
+        pass
+
+    def _get_github_doctype_classes(self) -> typing.List[object]:
+        """
+        Given a list of strings of doctype classes, turn those into
+        references to the actual class using the Doctype Registry.
+        """
+        doctype_classes = []
+        registry = Doctype.get_registry()
+        for doctype in GITHUB_DOCTYPES:
+            doctype_classes.append(registry[doctype])
+        return doctype_classes
 
 
 if __name__ == "__main__":
