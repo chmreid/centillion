@@ -6,14 +6,10 @@ import unittest
 
 from centillion import Config
 
+from . import STANDALONE_CONFIG_PATH, INTEGRATION_CONFIG_PATH
+
 
 logger = logging.getLogger(__name__)
-
-test_dir = os.path.abspath(os.path.dirname(__file__))
-config_dir = os.path.join(os.path.dirname(__file__), "..", "config")  # noqa
-
-STANDALONE_CONFIG_PATH = os.path.join(config_dir, "config.example.json")
-INTEGRATION_CONFIG_PATH = os.path.join(test_dir, "config.integration.json")
 
 
 #################
