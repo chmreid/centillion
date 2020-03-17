@@ -31,11 +31,16 @@ class TempCentillionConfig(object):
     def __init__(self, config_dict, *args, **kwargs):
         """This is the step that's run when object constructed"""
         super().__init__()
+        # This is the temp configuration the user specified
         self.config_dict = config_dict
+        # Make a temp dir for our temp config file
         self.temp_dir = tempfile.mkdtemp()
+        # Make a temp config file
         _, self.temp_json = tempfile.mkstemp(suffix=".json", dir=self.temp_dir)
         # Set the centillion root dir to the temp dir
         self.config_dict['centillion_root'] = self.temp_dir
+        # Save the old Config file location
+        self._old_config_file = Config.get_config_file()
 
     def __enter__(self, *args, **kwargs):
         """This is what's returned to the "as X" portion of the context manager"""
@@ -52,6 +57,8 @@ class TempCentillionConfig(object):
         os.unlink(self.temp_json)
         # Delete temp dir
         shutil.rmtree(self.temp_dir)
+        # Restore the old config file
+        Config(self._old_config_file)
 
     def _write_config(self, target: str, contents: str):
         """Utility method: write string contents to config file"""

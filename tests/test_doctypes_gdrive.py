@@ -69,13 +69,29 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         """Test the constructor of each GDrive doctype with (real) integration credentials"""
         doctypes_names_map = Config.get_doctypes_names_map()
         for doctype, names in doctypes_names_map.items():
+            name = names[0]
             if doctype in GDRIVE_DOCTYPES:
                 GDriveBaseDoctype(name)
+
+    @integration_test
+    def test_gdrive_doctype_constructors_invalid_credentials(self):
+        # Set invalid credentials and ensure validate credentials method catches it
+        pass
+
+    @standalone_test
+    def test_gdrive_doctype_constructors_invalid(self):
+        # Check that invalid inputs to constructor will not work
+        pass
 
     @standalone_test
     def test_render_search_result(self):
         # Mock whoosh search result
         # extends dict so you can do ['asdf']
+        pass
+
+    @standalone_test
+    def test_render_search_result_invalid(self):
+        # Test invalid inputs to render search result
         pass
 
     @standalone_test
@@ -104,14 +120,7 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
     @integration_test
     def test_get_remote_list(self):
         doctypes_names_map = Config.get_doctypes_names_map()
-        registry = Doctype.get_registry()
-
-        for doctype, names in doctypes_names_map.items():
-            name = names[0]
-            DoctypeCls = registry[doctype]
-            dt = DoctypeCls(name)
-            remote_list = dt.get_remote_list()
-            self.assertTrue(len(remote_list) > 0)
+        self.check_doctype_remote_list(GDRIVE_DOCTYPES, doctypes_names_map)
 
     @integration_test
     def test_gdrive_file(self):

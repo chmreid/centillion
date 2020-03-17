@@ -139,11 +139,18 @@ class Config(object):
         those credentials, we leave it up to the Google Drive doctype
         constructors to use this method and take care of the details.
         """
-        doctypes_config = cls._CONFIG['doctypes']
-        for creds in doctypes_config:
+        all_doctypes_config = cls._CONFIG['doctypes']
+
+        match_doctype_names = []
+        for creds in all_doctypes_config:
             if creds['name'] == name:
                 return creds
-        raise CentillionConfigException(f"Error: Requested doctype section {name} not found in config file")
+
+        # We didn't find the credentials we were looking for, assemble a helpful error message
+        creds_list = ", ".join([creds['name'] for creds in all_doctypes_config])
+        err = f"Error: Requested Doctype item named {name} not found in config file.\n"
+        err += f"Found credentials named: {creds_list}"
+        raise CentillionConfigException(err)
 
     @classmethod
     def get_doctypes_names_map(cls) -> typing.Dict[str, typing.List[str]]:

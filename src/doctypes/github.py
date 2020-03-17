@@ -20,6 +20,7 @@ from ..util import SearchResult, search_results_timestamps_datetime_to_str
 logger = logging.getLogger(__name__)
 
 USER_LIST_SEP_CHAR = ", "
+REPO_THAT_EXISTS = "chmreid/centillion"
 
 
 ###################
@@ -141,11 +142,11 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
 
     def _get_config_github_orgs(config):
         """Extract the list of github orgs from a config credentials section"""
-        return config["orgs"]
+        return config.get("orgs", [])
 
     def _get_config_github_repos(config):
         """Extract the list of github repos from a config credentials section"""
-        return config["repos"]
+        return config.get("repos", [])
 
     # Get list of repos for config orgs
     config = Config.get_doctype_config(name)
@@ -167,7 +168,7 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
             repos_list.append(repo.full_name)
 
     # Get list of repos from config repos
-    repos = _get_config_github_repos(name)
+    repos = _get_config_github_repos(config)
     logger.debug(f"Adding repositories...")
     for _, r in enumerate(repos):
         if "/" not in r:
@@ -217,18 +218,27 @@ class GithubBaseDoctype(Doctype):
         options set in the Config file for this set of credentials.
         """
         self.name = args[0]
-        doctype_config = Config.get_doctype_config(self.name)
+        self._parse_config()
+
+    def _parse_config(self):
+        config = Config.get_doctype_config(self.name)
         try:
-            self.access_token = doctype_config["access_token"]
+            self.access_token = config["access_token"]
         except KeyError:
-            raise CentillionConfigException(
-                f"Error: {self.doctype} credentials section does not contain access_token"
-            )
+            err = f"Error: {self.doctype} credentials section does not contain access_token"
+            raise CentillionConfigException(err)
+
+        logger.info(f"Doctype {self.name} using access token in config file")
         self.validate_credentials(self.access_token)
 
     def validate_credentials(self, access_token):
         if self.g is None:
+            # This works with valid or invalid tokens, so one more thing
             self.g = Github(access_token)
+            try:
+                self.g.get_repo(REPO_THAT_EXISTS)
+            except GithubException:
+                raise CentillionConfigException(f"Error: invalid Github credentials given for {self.name}")
 
 
 class GithubIssuePRDoctype(GithubBaseDoctype):
@@ -371,7 +381,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
 
         return remote_list
 
-    def get_by_id(self, doc_id):
+    def get_by_id(self, doc_id: str) -> dict:
         """
         Retrieve a remote document given its search index id
         (Github URL for all Github doctypes), and return an
@@ -393,7 +403,14 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         # Get issue/PR reference (get_issue and get_pull are interchangeable!)
         number = get_issue_pr_no_from_url(doc_id)
         repo = g.get_repo(repo_name)
-        item = repo.get_pull(number)
+
+        try:
+            item = repo.get_pull(number)
+        except GithubException:
+            try:
+                item = repo.get_issue(number)
+            except GithubException:
+                return {}
 
         msg = f"Indexing issue {repo_name}#{number}"
         logger.info(msg)

@@ -1,4 +1,5 @@
 import datetime
+import os
 
 
 class dotdict(dict):
@@ -68,5 +69,10 @@ def is_url_whoosh(u: str) -> bool:
         # parsing error
         return False
     if u[0:2]=='ht' or u[0:2]=='ft' or u[0:2]=='//':
+        return True
+    return False
+
+def is_absolute_path(path):
+    if os.path.abspath(path)==path:
         return True
     return False

@@ -35,7 +35,8 @@ class DoctypeTestMixin(unittest.TestCase):
         """
         for doctype in doctypes_to_check:
             self.assertIn(doctype, doctypes_names_map)
-            name = doctypes_names_map[doctype]
+            names = doctypes_names_map[doctype]
+            name = names[0]
             msg = f"Check doctype constructor for {doctype} using credentials {name}"
             with self.subTest(msg):
 

@@ -1,18 +1,16 @@
 encrypted_config_files.tar.gz
-secrets.py
-config_flask.py
 *.json
+client.json
+config.integration.json
+secrets*
 vp
-betavp
+venv
 *.pyc
-out/
 *search_index*
-venv/
 *.iml
 .idea
 last_searches.txt
 directories.txt
-md-search.sh
 
 ###############################
 # classic python .gitignore

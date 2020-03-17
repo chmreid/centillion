@@ -18,7 +18,9 @@ from centillion.doctypes.github import (
     get_pygithub_branch_refs,
     get_github_repos_list,
 )
+from centillion.error import CentillionException
 
+from .context import TempCentillionConfig
 from .decorators import standalone_test, integration_test
 from .mixins import (ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin)
 
@@ -143,6 +145,9 @@ class GithubDoctypePyGithubUtilsTest(unittest.TestCase):
         """
         doctypes_names_map = Config.get_doctypes_names_map()
         for doctype, names in doctypes_names_map.items():
+            if doctype not in GITHUB_DOCTYPES:
+                continue
+
             name = names[0]
             config = Config.get_doctype_config(name)
             access_token = config["access_token"]
@@ -196,6 +201,42 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         doctypes_names_map = Config.get_doctypes_names_map()
         self.check_doctype_constructors(GITHUB_DOCTYPES, doctypes_names_map)
 
+    @integration_test
+    def test_github_doctype_constructors_invalid_credentials(self):
+        """Test that Github Doctype constructors passed invalid credentials will fail"""
+
+        def get_invalid_config(name, doctype):
+            """Private utility function to create an invalid config dict"""
+            return {
+                "doctypes": [{
+                    "name": name,
+                    "doctype": doctype,
+                    "access_token": "invalid-access-token",
+                    "repos": [
+                        "charlesreid1/centillion-search-demo"
+                    ]
+                }]
+            }
+
+        # Set invalid credentials and ensure validate credentials method catches it
+        names_doctypes = [
+            ("invalid_config_gh_issue_pr", "github_issue_pr"),
+            ("invalid_config_gh_file", "github_file"),
+            ("invalid_config_gh_md", "github_markdown")
+        ]
+        for name, doctype in names_doctypes:
+            with TempCentillionConfig(get_invalid_config(name, doctype)) as config_file:
+                with self.assertRaises(CentillionException):
+                    self.assertEqual(Config._CONFIG_FILE, config_file)
+                    registry = Doctype.get_registry()
+                    DoctypeCls = registry[doctype]
+                    DoctypeCls(name)
+
+    @standalone_test
+    def test_github_doctype_constructors_invalid(self):
+        # Check that invalid inputs to constructor will not work
+        pass
+
     @standalone_test
     def test_render_search_result(self):
         doctype_classes = self._get_github_doctype_classes()
@@ -209,6 +250,11 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         # Set each field to something sensible
         # Pass it to render_search_result()
         # Get back a SearchResult
+
+    @standalone_test
+    def test_render_search_result_invalid(self):
+        # Test invalid inputs to render search result
+        pass
 
     @standalone_test
     def test_get_jinja_template(self):
@@ -236,21 +282,22 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
     @integration_test
     def test_get_remote_list(self):
         doctypes_names_map = Config.get_doctypes_names_map()
-        self.check_doctype_remote_list(GDRIVE_DOCTYPES, doctypes_names_map)
+        self.check_doctype_remote_list(GITHUB_DOCTYPES, doctypes_names_map)
 
     @integration_test
     def test_github_issues_prs(self):
         """Test the get_by_id (and get_schema) methods for the Github issue/PR doctype"""
         this_doctype = "github_issue_pr"
         doctypes_names_map = Config.get_doctypes_names_map()
-        name = doctypes_names_map[this_doctype]
+        names = doctypes_names_map[this_doctype]
+        name = names[0]
         doctype = GithubIssuePRDoctype(name)
 
         # Test an issue
         issue_id = "https://github.com/charlesreid1/centillion-search-demo/issues/1"
         doc = doctype.get_by_id(issue_id)
-        self.assertEqual(doc_id, doc["id"])
-        self.assertEqual(doc_id, doc["issue_url"])
+        self.assertEqual(issue_id, doc["id"])
+        self.assertEqual(issue_id, doc["issue_url"])
         self.assertEqual("Seattle drivers", doc["name"])
         self.assertEqual("Seattle drivers", doc["issue_title"])
         self.assertIn("charlesreid1", doc["github_user"])

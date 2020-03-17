@@ -17,7 +17,8 @@ from oauth2client import file
 from .content import get_stemming_analyzer  # scrub_markdown
 from .doctype import Doctype
 from ..config import Config
-from ..util import SearchResult, search_results_timestamps_datetime_to_str
+from ..error import CentillionConfigException
+from ..util import SearchResult, search_results_timestamps_datetime_to_str, is_absolute_path
 
 
 logger = logging.getLogger(__name__)
@@ -73,10 +74,38 @@ class GDriveBaseDoctype(Doctype):
         Constructor uses name to get GDrive credentials.
         """
         self.name = args[0]
+        self._parse_config()
+
+    def _parse_config(self):
         config = Config.get_doctype_config(self.name)
-        # Convert path to GDrive token file to absolute path
-        tp = config["token_path"]
-        self.token_path = os.path.join(os.path.abspath(Config.get_centillion_root()), tp)
+
+        # GDrive token file "credentials.json" can live in three places:
+        # 1. if token_path is an absolute path, the location given by it
+        # 2. a path relative to centillion root
+        # 3. a path relative to the config file dir
+        tp = config['token_path']
+        if is_absolute_path(tp):
+            # Easy case: absolute path to GDrive token
+            self.token_path = tp
+        else:
+            # Look for GDrive credentials in centillion root
+            root_dir = os.path.abspath(Config.get_centillion_root())
+            tp_rel_root = os.path.join(root_dir, tp)
+
+            # Look for GDrive credentials in config dir
+            config_dir = os.path.abspath(os.path.dirname(Config.get_config_file()))
+            tp_rel_config = os.path.join(config_dir, tp)
+
+            if os.path.isfile(tp_rel_root):
+                self.token_path = tp_rel_root
+            elif os.path.isfile(tp_rel_config):
+                self.token_path = tp_rel_config
+            else:
+                err = f"Error: could not find token path {tp}\n"
+                err += f"Tried {tp_rel_root} and {tp_rel_config}"
+                raise CentillionConfigException(err)
+
+        logger.info(f"Doctype {self.name} using credentials file at {self.token_path}")
         self.validate_credentials(self.token_path)
 
     def validate_credentials(self, token_path):
@@ -169,6 +198,8 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         # Use the pager to return all the things
         while True:
             ps = 100
+
+            # raises googleapiclient.errors.HttpError
             results = drive.list(  # type: ignore
                 pageSize=ps,
                 pageToken=nextPageToken,
@@ -176,17 +207,26 @@ class GDriveFileDoctype(GDriveBaseDoctype):
                 spaces="drive",
             ).execute()
 
+            # results example:
+            # {'files': [{'kind': 'drive#file', 'id': '1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8', 'name': 'Crime and Punishment Chapter 1', 'mimeType': 'application/vnd.google-apps.document', 'webViewLink': 'https://docs.google.com/document/d/1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8/edit?usp=drivesdk', 'createdTime': '2019-02-08T06:42:43.991Z', 'modifiedTime': '2019-02-08T06:45:27.588Z', 'owners': [{'kind': 'drive#user', 'displayName': '1 centillion', 'me': True, 'permissionId': '02189361238549265596', 'emailAddress': 'cent17710n@gmail.com'}]}, {'kind': 'drive#file', 'id': '0B2LoGxMr7f5Xc3RhcnRlcl9maWxl', 'name': 'Getting started', 'mimeType': 'application/pdf', 'webViewLink': 'https://drive.google.com/file/d/0B2LoGxMr7f5Xc3RhcnRlcl9maWxl/view?usp=drivesdk', 'createdTime': '2019-02-08T03:00:12.209Z', 'modifiedTime': '2019-02-08T03:00:12.209Z', 'owners': [{'kind': 'drive#user', 'displayName': '1 centillion', 'me': True, 'permissionId': '02189361238549265596', 'emailAddress': 'cent17710n@gmail.com'}]}]}
+
             nextPageToken = results.get("nextPageToken")
             files = results.get("files", [])
             for f in files:
                 fid = f["id"]
                 fname = f["name"]
-                ignore_file = self._ignore_file_check(fname)
+                fmimetype = f["mimeType"]
+                ignore_file = self._ignore_file_check(fname, fmimetype)
                 if not ignore_file:
                     key = fid
                     date = dateutil.parser.parse(f["modifiedTime"])
                     remote_list.append((date, key))
 
+            # End pagination early for tests
+            if nextPageToken is None or os.environ.get("CENTILLION_TEST_MODE", None) == "integration":
+                break
+
+        # Note: remote_list may be an empty list!
         return remote_list
 
     def get_by_id(self, doc_id):
@@ -214,7 +254,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
 
         return doc
 
-    def _ignore_file_check(self, fname):
+    def _ignore_file_check(self, *args, **kwargs):
         """
         Return True if this file should be ignored when assembling the remote list of files.
         Subclasses can override this method to filter files by name.
@@ -274,11 +314,20 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         """
         return template
 
-    def _ignore_file_check(self, fname):
+    def _ignore_file_check(self, fname, mimetype):
+
+        # Include files with .docx or .doc extension
         fprefix, fext = os.path.splitext(fname)
-        if fext not in [".docx", ".doc"]:
-            return True
-        return False
+        if fext in [".docx", ".doc"]:
+            return False
+
+        # Include files with mimetype
+        docx_mimetypes = ['application/vnd.google-apps.document']
+        if mimetype in docx_mimetypes:
+            return False
+
+        # Ignore everything else
+        return True
 
     def get_by_id(self, doc_id):
         """
