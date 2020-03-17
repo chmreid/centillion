@@ -1,4 +1,7 @@
-SAMPLE_GITHUB_ISSUE_PR = {
+import typing
+
+
+SAMPLE_GITHUB_ISSUE_PR: typing.Dict[str, str] = {
     'issue_title': '',
     'issue_url': '',
     'repo_name': '',
@@ -6,15 +9,15 @@ SAMPLE_GITHUB_ISSUE_PR = {
     'content': '',
 }
 
-SAMPLE_GITHUB_FILE = {}
+SAMPLE_GITHUB_FILE: typing.Dict[str, str] = {}
 
-SAMPLE_GITHUB_MARKDOWN = {}
+SAMPLE_GITHUB_MARKDOWN: typing.Dict[str, str] = {}
 
-SAMPLE_GDRIVE_FILE = {}
+SAMPLE_GDRIVE_FILE: typing.Dict[str, str] = {}
 
-SAMPLE_GDRIVE_DOCX = {}
+SAMPLE_GDRIVE_DOCX: typing.Dict[str, str] = {}
 
-INVALID_GOOGLE_CREDENTIALS = """
+INVALID_GOOGLE_CREDENTIALS: str = """
 {
     "access_token": "blahblahblah",
     "client_id": "blahblahblah",

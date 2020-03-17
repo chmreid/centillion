@@ -4,7 +4,6 @@ import functools
 import traceback
 import requests
 import logging
-from flask import request
 from flask import Response as FlaskResponse
 
 
@@ -45,7 +44,7 @@ def centillion_exception_handler(e: CentillionException) -> FlaskResponse:
     """
     Turn Centillion exceptions into Flask exceptions.
     This is added to the Flask app as an error handler.
-    
+
     Example:
 
         >>> from flask import Flask
@@ -75,7 +74,6 @@ def centillion_handler(func):
 
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        method, path = request.method, request.path
         try:
             return func(*args, **kwargs)
         except werkzeug.exceptions.HTTPException as ex:
@@ -93,7 +91,6 @@ def centillion_handler(func):
             code = "unhandled_exception"
             title = str(ex)
             stacktrace = traceback.format_exc()
-        headers = None
         logger.error(
             json.dumps(dict(status=status, code=code, title=title, stacktrace=stacktrace), indent=4)
         )

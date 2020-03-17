@@ -1,6 +1,5 @@
 import typing
 import unittest
-from unittest import mock
 from github import Github  # GithubException
 
 from centillion.config import Config
@@ -16,12 +15,11 @@ from centillion.doctypes.github import (
     get_repo_name_from_url,
     get_issue_pr_no_from_url,
     get_pygithub_branch_refs,
-    get_github_repos_list,
 )
 from centillion.error import CentillionException
 
 from .context import TempCentillionConfig
-from .decorators import standalone_test, integration_test
+from .decorators import integration_test
 from .mixins import (ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin)
 
 
@@ -32,7 +30,6 @@ GITHUB_DOCTYPES = ["github_issue_pr", "github_file", "github_markdown"]
 # NOTE: add test repo names/branches/head commit info
 
 
-@standalone_test
 class GithubDoctypeUtilsTest(unittest.TestCase):
     """
     Check utilities from the Github Doctype class.
@@ -93,7 +90,6 @@ class GithubDoctypePyGithubUtilsTest(unittest.TestCase):
     class is all set to go.
     """
 
-    @standalone_test
     def test_pygithub_utils_standalone(self):
         """
         Use (mocked) credentials to create (mocked) API instance,
@@ -173,7 +169,6 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
     we shouldn't be storing many (any?) class variables shared across methods.
     """
 
-    @standalone_test
     def test_doctypes(self):
         """Test the doctype attribute of each Github doctype"""
         self.assertEqual(GithubBaseDoctype.doctype, "github_base")
@@ -181,12 +176,10 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         self.assertEqual(GithubFileDoctype.doctype, "github_file")
         self.assertEqual(GithubMarkdownDoctype.doctype, "github_markdown")
 
-    @standalone_test
     def test_consistent_schemas(self):
         """Test that all Github document type schemas are consistent with one another"""
         self.check_consistent_schemas(GITHUB_DOCTYPES)
 
-    @standalone_test
     def test_github_base_doctype(self):
         """Test the GithubBaseDoctype constructor, mocking the Github API creation/credentials validation step"""
         # with mock.patch("centillion.doctypes.github.Github") as gh:
@@ -232,31 +225,28 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
                     DoctypeCls = registry[doctype]
                     DoctypeCls(name)
 
-    @standalone_test
     def test_github_doctype_constructors_invalid(self):
         # Check that invalid inputs to constructor will not work
         pass
 
-    @standalone_test
     def test_render_search_result(self):
-        doctype_classes = self._get_github_doctype_classes()
+        # doctype_classes = self._get_github_doctype_classes()
 
-        # Mock whoosh search result class - extend dict so you can use ['key']
-        class MockWhooshResult(dict):
-            # Any non-schema fields used?
-            pass
+        # # Mock whoosh search result class - extend dict so you can use ['key']
+        # class MockWhooshResult(dict):
+        #     # Any non-schema fields used?
+        #     pass
 
         # We are probably gonna have to hard-code one of every doctype
         # Set each field to something sensible
         # Pass it to render_search_result()
         # Get back a SearchResult
+        pass
 
-    @standalone_test
     def test_render_search_result_invalid(self):
         # Test invalid inputs to render search result
         pass
 
-    @standalone_test
     def test_get_jinja_template(self):
         """Test the Jinja template returned by each Github doctype"""
         # Turn a list of doctype labels into a list of doctype classes
@@ -266,7 +256,6 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
             for required_string in required_strings:
                 self.assertIn(required_string, DoctypeCls.get_jinja_template())
 
-    @standalone_test
     def test_render_matches_jinja(self):
         """
         Confirm that the SearchResult object resulting from render_search_result is consistent

@@ -2,7 +2,6 @@ import os
 import json
 import typing
 import subprocess
-from enum import Enum, auto
 from .error import CentillionConfigException
 
 
@@ -13,9 +12,9 @@ class Config(object):
     """
     Singleton class to allow uniform access to centillion configuration.
     Uses a singleton pattern to store the config file location once.
-    
+
     Example:
-        
+
         >>> c = Config('/path/to/my/config.json')
         >>> print(Config.get_config_file())
         /path/to/my/config.json
@@ -28,7 +27,7 @@ class Config(object):
     _CONFIG_FILE: typing.Optional[str] = None
     _CONFIG: typing.Optional[dict] = None
 
-    def __init__(self, config_file = None):
+    def __init__(self, config_file=None):
         if config_file is None:
             config_file = Config.get_required_env_var("CENTILLION_CONFIG")
 
@@ -51,9 +50,11 @@ class Config(object):
     @staticmethod
     def get_required_config_var(configvar: str) -> str:
         if not Config._CONFIG:
-            raise CentillionConfigException(f"Configuration is missing, using file {Config._CONFIG_FILE}")
+            err = f"Configuration is missing, using file {Config._CONFIG_FILE}"
+            raise CentillionConfigException(err)
         if configvar not in Config._CONFIG:
-            raise CentillionConfigException(f"Please set the {configvar} variable in the config file {Config._CONFIG_FILE}")
+            err = f"Please set the {configvar} variable in the config file {Config._CONFIG_FILE}"
+            raise CentillionConfigException(err)
         return Config._CONFIG[configvar]
 
     @staticmethod
@@ -141,7 +142,6 @@ class Config(object):
         """
         all_doctypes_config = cls._CONFIG['doctypes']
 
-        match_doctype_names = []
         for creds in all_doctypes_config:
             if creds['name'] == name:
                 return creds

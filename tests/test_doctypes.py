@@ -3,13 +3,10 @@ import unittest
 from centillion.doctypes.registry import DoctypeRegistry
 from centillion.doctypes.doctype import Doctype
 
-from .decorators import standalone_test
-
 
 DOCTYPES = ["subclass_a", "subclass_b", "subclass_c"]
 
 
-@standalone_test
 class DoctypeRegistryTest(unittest.TestCase):
     """
     Check the DoctypeRegistry metaclass works as intended
@@ -29,7 +26,6 @@ class DoctypeRegistryTest(unittest.TestCase):
             self.assertIn(doctype, DoctypeRegistry.get_registry())
 
 
-@standalone_test
 class DoctypeTest(unittest.TestCase):
     """
     Check the Doctype base class works as intended

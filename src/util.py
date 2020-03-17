@@ -7,6 +7,7 @@ class dotdict(dict):
     Dictionary that makes members accessible using dot.notation.
     Also see https://stackoverflow.com/q/2352181/463213
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         for arg in args:
@@ -59,20 +60,21 @@ def is_url_whoosh(u: str) -> bool:
     :param u: string to check
     :returns bool: True if string is a url.
     """
-    if '...' in u:
+    if "..." in u:
         # special case of whoosh messing up urls
         return False
-    if '<b' in u or '&lt;' in u:
+    if "<b" in u or "&lt;" in u:
         # special case of whoosh highlighting a word in a link
         return False
-    if u[-1] is '-':
+    if u[-1] == "-":
         # parsing error
         return False
-    if u[0:2]=='ht' or u[0:2]=='ft' or u[0:2]=='//':
+    if u[0:2] == "ht" or u[0:2] == "ft" or u[0:2] == "//":
         return True
     return False
 
+
 def is_absolute_path(path):
-    if os.path.abspath(path)==path:
+    if os.path.abspath(path) == path:
         return True
     return False

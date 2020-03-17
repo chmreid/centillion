@@ -4,7 +4,7 @@ import os
 import time
 import unittest
 
-from centillion import Config
+from centillion.config import Config
 
 from . import STANDALONE_CONFIG_PATH, INTEGRATION_CONFIG_PATH
 
@@ -74,7 +74,11 @@ def is_integration():
 
 
 def always(f):
-    return f
+    if is_standalone():
+        Config(STANDALONE_CONFIG_PATH)
+    if is_integration():
+        Config(INTEGRATION_CONFIG_PATH)
+        return f
 
 
 def _test_mode():

@@ -38,15 +38,42 @@ def get_gdrive_service(token_path):
       (requires a one-time interactive login step)
     - Put the credentials.json file in the path specified in the centillion config file
 
-    Then token_path above should be set to the path of credentials.json
+    Then token_path above should be set to the path of credentials.json.
+    It can be an absolute path,
     """
-    store = file.Storage(token_path)
+    real_token_path = find_token_path(token_path)
+    store = file.Storage(real_token_path)
     creds = store.get()
     if not creds or creds.invalid:
         raise Exception("Error: invalid or missing Google Drive API credentials")
     service = build("drive", "v3", http=creds.authorize(Http()))
-    return service.files()
+    return real_token_path, service.files()
 
+
+def find_token_path(token_path):
+    if is_absolute_path(token_path):
+        # Easy case: absolute path to GDrive token
+        if os.path.exists(token_path):
+            return token_path
+        else:
+            err = f"Error: Could not find Google Drive token at absolute path {token_path}"
+            raise CentillionConfigException(err)
+    else:
+        # Look for GDrive credentials in centillion root
+        root_dir = os.path.abspath(Config.get_centillion_root())
+        tproot = os.path.join(root_dir, token_path)
+        if os.path.exists(tproot):
+            return tproot
+
+        # Look for GDrive credentials in config dir
+        config_dir = os.path.abspath(os.path.dirname(Config.get_config_file()))
+        tpconf = os.path.join(config_dir, token_path)
+        if os.path.exists(tpconf):
+            return tpconf
+
+        err = f"Error: Could not find Google Drive token at relative path {token_path}"
+        err += f"\nTried {tproot} and {tpconf}"
+        raise CentillionConfigException(err)
 
 #################
 # Doctype classes
@@ -83,36 +110,15 @@ class GDriveBaseDoctype(Doctype):
         # 1. if token_path is an absolute path, the location given by it
         # 2. a path relative to centillion root
         # 3. a path relative to the config file dir
-        tp = config['token_path']
-        if is_absolute_path(tp):
-            # Easy case: absolute path to GDrive token
-            self.token_path = tp
-        else:
-            # Look for GDrive credentials in centillion root
-            root_dir = os.path.abspath(Config.get_centillion_root())
-            tp_rel_root = os.path.join(root_dir, tp)
-
-            # Look for GDrive credentials in config dir
-            config_dir = os.path.abspath(os.path.dirname(Config.get_config_file()))
-            tp_rel_config = os.path.join(config_dir, tp)
-
-            if os.path.isfile(tp_rel_root):
-                self.token_path = tp_rel_root
-            elif os.path.isfile(tp_rel_config):
-                self.token_path = tp_rel_config
-            else:
-                err = f"Error: could not find token path {tp}\n"
-                err += f"Tried {tp_rel_root} and {tp_rel_config}"
-                raise CentillionConfigException(err)
-
-        logger.info(f"Doctype {self.name} using credentials file at {self.token_path}")
-        self.validate_credentials(self.token_path)
+        tp = config["token_path"]
+        logger.info(f"Doctype {self.name} using credentials file at {tp}")
+        self.validate_credentials(tp)
+        self.token_path = tp
 
     def validate_credentials(self, token_path):
-        if not os.path.exists(token_path):
-            raise Exception(f"Error: Google Drive token path does not exist: {token_path}")
+        # get_gdrive_service will handle checking whether token_path exists
         if self.drive is None:
-            self.drive = get_gdrive_service(token_path)
+            self.token_path, self.drive = get_gdrive_service(token_path)
 
 
 class GDriveFileDoctype(GDriveBaseDoctype):
@@ -208,7 +214,47 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             ).execute()
 
             # results example:
-            # {'files': [{'kind': 'drive#file', 'id': '1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8', 'name': 'Crime and Punishment Chapter 1', 'mimeType': 'application/vnd.google-apps.document', 'webViewLink': 'https://docs.google.com/document/d/1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8/edit?usp=drivesdk', 'createdTime': '2019-02-08T06:42:43.991Z', 'modifiedTime': '2019-02-08T06:45:27.588Z', 'owners': [{'kind': 'drive#user', 'displayName': '1 centillion', 'me': True, 'permissionId': '02189361238549265596', 'emailAddress': 'cent17710n@gmail.com'}]}, {'kind': 'drive#file', 'id': '0B2LoGxMr7f5Xc3RhcnRlcl9maWxl', 'name': 'Getting started', 'mimeType': 'application/pdf', 'webViewLink': 'https://drive.google.com/file/d/0B2LoGxMr7f5Xc3RhcnRlcl9maWxl/view?usp=drivesdk', 'createdTime': '2019-02-08T03:00:12.209Z', 'modifiedTime': '2019-02-08T03:00:12.209Z', 'owners': [{'kind': 'drive#user', 'displayName': '1 centillion', 'me': True, 'permissionId': '02189361238549265596', 'emailAddress': 'cent17710n@gmail.com'}]}]}
+            # z = {
+            #     "files": [
+            #         {
+            #             "kind": "drive#file",
+            #             "id": "1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8",
+            #             "name": "Crime and Punishment Chapter 1",
+            #             "mimeType": "application/vnd.google-apps.document",
+            #             "webViewLink":
+            #             "https://docs.google.com/document/d/1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8/edit?usp=drivesdk", # noqa
+            #             "createdTime": "2019-02-08T06:42:43.991Z",
+            #             "modifiedTime": "2019-02-08T06:45:27.588Z",
+            #             "owners": [
+            #                 {
+            #                     "kind": "drive#user",
+            #                     "displayName": "1 centillion",
+            #                     "me": True,
+            #                     "permissionId": "02189361238549265596",
+            #                     "emailAddress": "cent17710n@gmail.com",
+            #                 }
+            #             ],
+            #         },
+            #         {
+            #             "kind": "drive#file",
+            #             "id": "0B2LoGxMr7f5Xc3RhcnRlcl9maWxl",
+            #             "name": "Getting started",
+            #             "mimeType": "application/pdf",
+            #             "webViewLink": "https://drive.google.com/file/d/0B2LoGxMr7f5Xc3RhcnRlcl9maWxl/view?usp=drivesdk", # noqa
+            #             "createdTime": "2019-02-08T03:00:12.209Z",
+            #             "modifiedTime": "2019-02-08T03:00:12.209Z",
+            #             "owners": [
+            #                 {
+            #                     "kind": "drive#user",
+            #                     "displayName": "1 centillion",
+            #                     "me": True,
+            #                     "permissionId": "02189361238549265596",
+            #                     "emailAddress": "cent17710n@gmail.com",
+            #                 }
+            #             ],
+            #         },
+            #     ]
+            # }
 
             nextPageToken = results.get("nextPageToken")
             files = results.get("files", [])
@@ -223,7 +269,10 @@ class GDriveFileDoctype(GDriveBaseDoctype):
                     remote_list.append((date, key))
 
             # End pagination early for tests
-            if nextPageToken is None or os.environ.get("CENTILLION_TEST_MODE", None) == "integration":
+            if (
+                nextPageToken is None
+                or os.environ.get("CENTILLION_TEST_MODE", None) == "integration"
+            ):
                 break
 
         # Note: remote_list may be an empty list!
@@ -322,7 +371,7 @@ class GDriveDocxDoctype(GDriveFileDoctype):
             return False
 
         # Include files with mimetype
-        docx_mimetypes = ['application/vnd.google-apps.document']
+        docx_mimetypes = ["application/vnd.google-apps.document"]
         if mimetype in docx_mimetypes:
             return False
 

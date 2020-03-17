@@ -5,8 +5,6 @@ import datetime
 
 from centillion.doctypes.doctype import Doctype
 
-from .decorators import integration_test
-
 
 class DoctypeTestMixin(unittest.TestCase):
     """

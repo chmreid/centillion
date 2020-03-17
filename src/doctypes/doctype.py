@@ -49,8 +49,16 @@ class Doctype(metaclass=DoctypeRegistry):
     def get_remote_list(self):
         self._not_implemented("get_remote_list")
 
-    def get_by_id(self):
+    def get_by_id(self, doc_id):
         self._not_implemented("get_by_id")
+
+    @classmethod
+    def render_search_result(cls, whoosh_search_result):
+        cls._not_implemented("render_search_result")
+
+    @classmethod
+    def get_jinja_template(cls):
+        cls._not_implemented("get_jinja_template")
 
     @classmethod
     def get_common_schema(cls):
@@ -69,7 +77,3 @@ class Doctype(metaclass=DoctypeRegistry):
         """Return the string label for this doctype"""
         logger.debug("Fetching class doctype")
         return cls.doctype
-
-    @classmethod
-    def search_result_template(cls):
-        cls._not_implemented("search_result_template")

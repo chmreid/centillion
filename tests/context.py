@@ -7,6 +7,7 @@ import tempfile
 from io import StringIO
 
 from centillion.config import Config
+from centillion.error import CentillionConfigException
 
 
 logger = logging.getLogger(__name__)
@@ -39,12 +40,13 @@ class TempCentillionConfig(object):
         _, self.temp_json = tempfile.mkstemp(suffix=".json", dir=self.temp_dir)
         # Set the centillion root dir to the temp dir
         self.config_dict['centillion_root'] = self.temp_dir
-        # Save the old Config file location
-        self._old_config_file = Config.get_config_file()
 
     def __enter__(self, *args, **kwargs):
         """This is what's returned to the "as X" portion of the context manager"""
         self._write_config(self.temp_json, json.dumps(self.config_dict))
+        # Save the old config file location
+        self._old_config_file = Config.get_config_file()
+        # Re-init Config with new config file
         Config(self.temp_json)
         return self.temp_json
 
@@ -57,8 +59,11 @@ class TempCentillionConfig(object):
         os.unlink(self.temp_json)
         # Delete temp dir
         shutil.rmtree(self.temp_dir)
-        # Restore the old config file
-        Config(self._old_config_file)
+        # Restoring can be problematic if prior config file does not exist
+        try:
+            Config(self._old_config_file)
+        except CentillionConfigException:
+            pass
 
     def _write_config(self, target: str, contents: str):
         """Utility method: write string contents to config file"""

@@ -9,10 +9,8 @@ from centillion.error import CentillionConfigException
 from centillion.config import Config, TMPDIR_NAME
 
 from .context import TempCentillionConfig
-from .decorators import standalone_test
 
 
-@standalone_test
 class ConfigTest(unittest.TestCase):
 
     @classmethod
@@ -72,11 +70,13 @@ class ConfigTest(unittest.TestCase):
         """
         Check the ability to access environment variables in the config file
         """
-        os.environ["FOO"] = "BAR"
-        self.assertEqual(Config.get_required_env_var("FOO"), "BAR")
-        del os.environ["FOO"]
-        with self.assertRaises(CentillionConfigException):
-            Config.get_required_env_var("FOO")
+        temp_config = dict()
+        with TempCentillionConfig(temp_config):
+            os.environ["FOO"] = "BAR"
+            self.assertEqual(Config.get_required_env_var("FOO"), "BAR")
+            del os.environ["FOO"]
+            with self.assertRaises(CentillionConfigException):
+                Config.get_required_env_var("FOO")
 
     '''
     def test_config_class_get_doctypes(self):

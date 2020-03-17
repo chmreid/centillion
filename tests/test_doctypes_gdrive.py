@@ -10,13 +10,17 @@ from centillion.doctypes.gdrive import (
     get_gdrive_service
 )
 
-from .decorators import standalone_test, integration_test
+from .decorators import integration_test
 from .mixins import (ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin)
 
 
 # List of Github doctypes (excluding base type)
 # (Integration tests should include one credential per doctype in this list in config file)
 GDRIVE_DOCTYPES = ["gdrive_file", "gdrive_docx"]
+
+
+class FindTokenPathTest(unittest.TestCase):
+    pass
 
 
 @integration_test
@@ -45,19 +49,16 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
     Test Google Drive doctypes.
     """
 
-    @standalone_test
     def test_doctypes(self):
         """Test the doctype attribute of each GDrive doctype"""
         self.assertEqual(GDriveBaseDoctype.doctype, "gdrive_base")
         self.assertEqual(GDriveFileDoctype.doctype, "gdrive_file")
         self.assertEqual(GDriveDocxDoctype.doctype, "gdrive_docx")
 
-    @standalone_test
     def test_consistent_schemas(self):
         """Test that all GDrive document type schemas are consistent with one another"""
         self.check_consistent_schemas(GDRIVE_DOCTYPES)
 
-    @standalone_test
     def test_gdrive_base_doctype(self):
         """Test the GDriveBaseDoctype constructor, mocking the Google Drive API creation/credentials validation step"""
         # with mock.patch("centillion.doctypes.github.Github") as gh:
@@ -78,23 +79,19 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         # Set invalid credentials and ensure validate credentials method catches it
         pass
 
-    @standalone_test
     def test_gdrive_doctype_constructors_invalid(self):
         # Check that invalid inputs to constructor will not work
         pass
 
-    @standalone_test
     def test_render_search_result(self):
         # Mock whoosh search result
         # extends dict so you can do ['asdf']
         pass
 
-    @standalone_test
     def test_render_search_result_invalid(self):
         # Test invalid inputs to render search result
         pass
 
-    @standalone_test
     def test_get_jinja_template(self):
         """Test the Jinja template returned by each Github doctype"""
         # Turn a list of doctype labels into a list of doctype classes
@@ -104,7 +101,6 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
             for DoctypeCls in doctype_classes:
                 self.assertIn(required_string, DoctypeCls.get_jinja_template())
 
-    @standalone_test
     def test_render_matches_jinja(self):
         """
         Confirm that the SearchResult object resulting from render_search_result is consistent

@@ -9,6 +9,25 @@ lint:
 mypy:
 	mypy --ignore-missing-imports --no-strict-optional $(MODULES)
 
+tests:=$(wildcard tests/test_*.py)
+
+test: $(tests)
+	@echo $(tests)
+	pytest $(tests)
+
+# A pattern rule that runs a single test script
+$(tests): %.py : mypy lint
+	pytest -v $*.py
+
+all_test:
+	$(MAKE) CENTILLION_TEST_MODE="standalone integration" test
+
+standalone_test:
+	$(MAKE) CENTILLION_TEST_MODE="standalone" test
+
+integration_test:
+	$(MAKE) CENTILLION_TEST_MODE="integration" test
+
 refresh_all_requirements:
 	@echo -n '' >| requirements.txt
 	@echo -n '' >| requirements-dev.txt
@@ -28,4 +47,4 @@ requirements.txt requirements-dev.txt : %.txt : %.txt.in
 requirements-dev.txt : requirements.txt.in
 
 .PHONY: all lint mypy
-.PHONY: refresh_all_requirements requirements.txt requirements-dev.txt
+.PHONY: refresh_all_requirements requirements.txt requirements-dev.txt test all_test integration_test standalone_test
