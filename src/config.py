@@ -86,6 +86,7 @@ class Config(object):
 
     _CENTILLION_ROOT: typing.Optional[str] = None
     _CENTILLION_TMPDIR: typing.Optional[str] = None
+    _CENTILLION_INDEXDIR: typing.Optional[str] = None
     _DOCTYPES_LIST: typing.Optional[typing.List[str]] = None
     _DOCTYPES_NAMES_MAP: typing.Optional[typing.Dict[str, typing.List[str]]] = None
 
@@ -101,6 +102,19 @@ class Config(object):
         return cls._CENTILLION_ROOT
 
     @classmethod
+    def get_centillion_indexdir(cls) -> str:
+        if cls._CENTILLION_INDEXDIR is None:
+            if 'centillion_index' in cls._CONFIG:
+                cls._CENTILLION_INDEXDIR = cls._CONFIG['centillion_index']
+            else:
+                centillion_root = Config.get_centillion_root()
+                centillion_indexdir = os.path.join(centillion_root, 'index')
+                cls._CENTILLION_INDEXDIR = centillion_indexdir
+            if not os.path.isdir(centillion_indexdir):
+                subprocess.call(['mkdir', '-p', centillion_indexdir])
+        return cls._CENTILLION_INDEXDIR
+
+    @classmethod
     def get_centillion_tmpdir(cls) -> str:
         if cls._CENTILLION_TMPDIR is None:
             centillion_root = Config.get_centillion_root()
@@ -112,7 +126,7 @@ class Config(object):
 
     @classmethod
     def get_doctypes(cls) -> typing.List[str]:
-        """Return a list of all doctypes being indexed by centillion."""
+        """Return a list of all doctypes present in the centillion config file."""
         if cls._DOCTYPES_LIST is None:
             doctypes = set()
             for cred in cls._CONFIG['doctypes']:
