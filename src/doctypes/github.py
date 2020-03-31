@@ -355,7 +355,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
 
         Github types use the Github URL for the search index ID.
 
-        :returns: list of (last_modified_date, issue_pr_url) tuples
+        :returns: list of tuples (last_modified_date, issue_pr_url)
                   (types are datetime.datetime and str)
         """
         name = self.name
