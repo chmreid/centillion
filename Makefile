@@ -3,11 +3,17 @@ MODULES=src/doctypes tests
 
 all: test
 
+
+# Checks
+
 lint:
 	flake8 $(MODULES)
 
 mypy:
 	mypy --ignore-missing-imports --no-strict-optional $(MODULES)
+
+
+# Tests
 
 tests:=$(wildcard tests/test_*.py)
 
@@ -27,6 +33,9 @@ standalone_test:
 
 integration_test:
 	$(MAKE) CENTILLION_TEST_MODE="integration" test
+
+
+# Requirements
 
 refresh_all_requirements:
 	@echo -n '' >| requirements.txt
