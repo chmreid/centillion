@@ -2,11 +2,10 @@ from functools import lru_cache
 from whoosh import index
 from whoosh.qparser import QueryParser, MultifieldParser
 
-from ..doctypes import (
+from ..doctypes.doctype import (
     Doctype,
-    DoctypeRegistry,
-    SCHEMA_LABELS_DOCTYPE,
     SCHEMA_LABELS_ID,
+    SCHEMA_LABELS_DOCTYPE,
     SCHEMA_LABELS_MODIFIED,
 )
 from ..config import Config
