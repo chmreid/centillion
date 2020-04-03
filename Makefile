@@ -1,5 +1,5 @@
 include common.mk
-MODULES=src/doctypes tests
+MODULES=src/search src/doctypes tests
 
 all: test
 
