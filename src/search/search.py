@@ -1,6 +1,10 @@
+import logging
+import typing
+import datetime
 from functools import lru_cache
 from whoosh import index
 from whoosh.qparser import QueryParser, MultifieldParser
+from whoosh.fields import Schema
 
 from ..doctypes.doctype import (
     Doctype,
@@ -9,6 +13,7 @@ from ..doctypes.doctype import (
     SCHEMA_LABELS_MODIFIED,
 )
 from ..config import Config
+from ..error import CentillionSearchIndexException
 
 
 logger = logging.getLogger(__name__)
@@ -30,14 +35,16 @@ class Search(object):
     def __init__(self):
         # Initialize the schema
         self.get_schema()
+        self.open_index()
 
-    @lru_cache
+    @lru_cache(maxsize=32)
     def get_schema(self):
         # This dictionary will be converted to a Schema object
         _schema = {}
 
         # Get the common schema
         common_schema = Doctype.get_common_schema()
+        _schema.update(common_schema)
 
         # Get the doctype schemas
         doctypes_list = Config.get_doctypes()
@@ -51,8 +58,9 @@ class Search(object):
                     type_theirs = type(this_doctype_schema[schema_field])
                     type_ours = type(_schema[schema_field])
                     if type_theirs != type_ours:
-                        err = f"Error: schema mismatch for field {schema_field}, doctype {doctype}"
-                        raise Exception(err)
+                        err = "Error: schema mismatch with existing index for field "
+                        err += f"{schema_field}, doctype {doctype}"
+                        raise CentillionSearchIndexException(err)
                 else:
                     # Field is not in schema, add it to the schema
                     _schema[schema_field] = this_doctype_schema[schema_field]
@@ -77,7 +85,7 @@ class Search(object):
         if self.schema != self.ix.schema:
             err = f"Error: schema mismatch! Specified schema from config file does not "
             err += f"match schema of existing search index."
-            raise Exception(err)
+            raise CentillionSearchIndexException(err)
 
     def _create_index(self):
         """Create a new index"""
@@ -144,6 +152,12 @@ class Search(object):
             writer.add_document(**doc)
         writer.commit()
 
+    def add_doc(self, doc: typing.Dict[str, typing.Any]) -> None:
+        """Add a single document to the search index"""
+        writer = self.ix.writer()
+        writer.add_document(**doc)
+        writer.commit()
+
     def delete_docs(self, to_delete) -> None:
         """
         Delete all documents in a list of document IDs from the local index. Called once per doctype.
@@ -153,6 +167,12 @@ class Search(object):
         writer = self.ix.writer()
         for doc_id in to_delete:
             writer.delete_by_term(SCHEMA_LABELS_ID, doc_id)
+        writer.commit()
+
+    def delete_doc(self, doc_id: str) -> None:
+        """Delete a single document from the search index"""
+        writer = self.ix.writer()
+        writer.delete_by_term(SCHEMA_LABELS_ID, doc_id)
         writer.commit()
 
     def update_docs(
