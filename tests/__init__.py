@@ -1,6 +1,8 @@
 import os
 import logging
 
+from .context import TempCentillionConfig
+
 
 logger = logging.getLogger(__name__)
 
