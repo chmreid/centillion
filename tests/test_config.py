@@ -11,6 +11,29 @@ from centillion.config import Config, TMPDIR_NAME
 from .context import TempCentillionConfig
 
 
+def get_config_multiple_doctypes():
+    doctype_list = [
+        "gdrive_docx", 
+        "gdrive_file", 
+        "github_issues_prs",
+    ]
+    doctype_list.sort()
+    doctype_config = {
+        "doctypes": [
+            {"name": "foo", "doctype": "gdrive_file", "token_path": "credentials.json"},
+            {"name": "foo_docx", "doctype": "gdrive_docx", "token_path": "credentials.json"},
+            {
+                "name": "foobar",
+                "doctype": "github_issues_prs",
+                "application_token": "XXX",
+                "orgs": ["baz"],
+                "repos": ["foobar/fuzwuz", "foobar/wuznuz"],
+            },
+        ]
+    }
+    return doctype_list, doctype_config
+
+
 class ConfigTest(unittest.TestCase):
 
     @classmethod
@@ -25,27 +48,47 @@ class ConfigTest(unittest.TestCase):
         """
         Test the constructors of the Config class
         """
-        temp_config = dict()
-        with TempCentillionConfig(temp_config) as temp_config_file:
+        # Use an empty configuration dict
+        with TempCentillionConfig(dict()) as temp_config_file:
             # Check that the constructor set the config file properly
             self.assertEqual(Config._CONFIG_FILE, temp_config_file)
+            # Check the get_config_file() method works
             self.assertEqual(Config.get_config_file(), temp_config_file)
 
     def test_config_class_path_vars(self):
         """
-        Test path variables in the Config class
+        Test configuration variables related to paths and directories
+        - root directory
+        - temporary directory
+        - index directory
         """
-        temp_config = dict()
-        with TempCentillionConfig(temp_config) as temp_config_file:
-            # get_centillion_root
-            centillion_root_dir = os.path.dirname(temp_config_file)
-            self.assertEqual(Config.get_centillion_root(), centillion_root_dir)
-            # get_centillion_tmpdir
-            centillion_temp_dir = os.path.join(centillion_root_dir, TMPDIR_NAME)
-            self.assertEqual(Config.get_centillion_tmpdir(), centillion_temp_dir)
-            # Accessing the tmpdir location creates it, so verify it was created and clean up
-            self.assertTrue(os.path.isdir(centillion_temp_dir))
-            shutil.rmtree(centillion_temp_dir)
+        # To test out defaults, we use an empty configuration
+        root_dir = None
+        indx_dir = None
+        temp_dir = None
+        with TempCentillionConfig(dict()) as temp_config_file:
+            # centillion root:
+            # this must already exist beforehand
+            # (handled here by the TempCentillionConfig context manager)
+            root_dir = os.path.dirname(temp_config_file)
+            self.assertEqual(Config.get_centillion_root(), root_dir)
+
+            # centillion index dir:
+            # accessing the variable should create the directory
+            indx_dir = os.path.join(root_dir, 'index')
+            self.assertFalse(os.path.isdir(indx_dir))
+            self.assertEqual(Config.get_centillion_indexdir(), indx_dir)
+            self.assertTrue(os.path.isdir(indx_dir))
+
+            # centillion temp dir:
+            # accessing the variable should create the directory
+            temp_dir = os.path.join(root_dir, TMPDIR_NAME)
+            self.assertFalse(os.path.isdir(temp_dir))
+            self.assertEqual(Config.get_centillion_tmpdir(), temp_dir)
+            self.assertTrue(os.path.isdir(temp_dir))
+
+        # Once we close the temporary config context, those directories should be gone
+        self.assertFalse(os.path.isdir(root_dir))
 
     '''
     def test_config_class_required_vars(self):
@@ -78,37 +121,25 @@ class ConfigTest(unittest.TestCase):
             with self.assertRaises(CentillionConfigException):
                 Config.get_required_env_var("FOO")
 
-    '''
     def test_config_class_get_doctypes(self):
         """
         Check the ability to get a list of active doctypes in the config file
         """
-        test_config = {
-            "doctypes": [
-                {"name": "foo", "doctype": "gdrive_file", "token_path": "credentials.json"},
-                {"name": "foo_docx", "doctype": "gdrive_docx", "token_path": "credentials.json"},
-                {
-                    "name": "foobar",
-                    "doctype": "github_issues_prs",
-                    "application_token": "XXX",
-                    "orgs": ["baz"],
-                    "repos": ["foobar/fuzwuz", "foobar/wuznuz"],
-                },
-            ]
-        }
-        self.write_config(json.dumps(test_config))
-        Config(self.path)
-        # Check that doctypes list is returned
-        doctypes = ["gdrive_file", "gdrive_docx", "github_issues_prs"]
-        self.assertEqual(Config.get_doctypes(), doctypes)
-        # Check that doctypes config section is returned
-        for d in doctypes:
-            name = d["name"]
-            config = Config.get_doctypes_config(name)
-            self.assertDictEqual(config, d)
-        with self.assertRaises(CentillionConfigException):
-            Config.get_doctypes_config("non-existent-config")
-    '''
+        doctypes, temp_config = get_config_multiple_doctypes() 
+        with TempCentillionConfig(temp_config) as temp_config_file:
+            config_doctypes = Config.get_doctypes()
+            self.assertEqual(doctypes, config_doctypes)
+
+    def test_config_class_get_doctype_configs(self):
+        """
+        Check the abiltiy to get the configuration section for a particular doctype
+        """
+        doctypes, temp_config = get_config_multiple_doctypes()
+        with TempCentillionConfig(temp_config) as temp_config_file:
+            for doctype_config_entry in temp_config['doctypes']:
+                name = doctype_config_entry['name']
+                doctype_config = Config.get_doctype_config(name)
+                self.assertEqual(doctype_config_entry, doctype_config)
 
 
 if __name__ == "__main__":
