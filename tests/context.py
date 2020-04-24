@@ -59,11 +59,8 @@ class TempCentillionConfig(object):
         os.unlink(self.temp_json)
         # Delete temp dir
         shutil.rmtree(self.temp_dir)
-        # Restoring can be problematic if prior config file does not exist
-        try:
-            Config(self._old_config_file)
-        except CentillionConfigException:
-            pass
+        # Reset all config variables
+        Config.reset()
 
     def _write_config(self, target: str, contents: str):
         """Utility method: write string contents to config file"""
