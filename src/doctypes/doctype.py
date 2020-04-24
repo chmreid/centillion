@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 SCHEMA_LABELS_ID = "id"
 SCHEMA_LABELS_DOCTYPE = "kind"
-SCHEMA_LABELS_MODIFIED = "modified_date"
+SCHEMA_LABELS_MODIFIED = "modified_time"
 
 
 class Doctype(metaclass=DoctypeRegistry):
