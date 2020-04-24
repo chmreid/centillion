@@ -182,10 +182,9 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
 
     def test_github_base_doctype(self):
         """Test the GithubBaseDoctype constructor, mocking the Github API creation/credentials validation step"""
+        # Set a temporary config file
         # with mock.patch("centillion.doctypes.github.Github") as gh:
         #     GithubBaseDoctype(name)
-        #
-        # Above assumes there is no cross-checking with config file credentials section
         pass
 
     @integration_test
@@ -219,8 +218,8 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         ]
         for name, doctype in names_doctypes:
             with TempCentillionConfig(get_invalid_config(name, doctype)) as config_file:
+                self.assertEqual(Config._CONFIG_FILE, config_file)
                 with self.assertRaises(CentillionException):
-                    self.assertEqual(Config._CONFIG_FILE, config_file)
                     registry = Doctype.get_registry()
                     DoctypeCls = registry[doctype]
                     DoctypeCls(name)
