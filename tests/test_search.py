@@ -10,64 +10,13 @@ from centillion.config import Config
 from centillion.search import Search
 from centillion.doctypes.doctype import Doctype
 
-from . import TempCentillionConfig
-
-
-def get_plain_config() -> typing.Dict[str, typing.Any]:
-    """
-    Create a simple configuration file that tests can use.
-    - We don't set centillion root because the TempCentillionConfig
-      context manager will do that for us
-    - We don't set centillion indexdir because by default it is at
-      $centillion_root/index
-    """
-    return {
-        "doctypes": [],
-    }
-
-
-def get_plain_doc(ix: int) -> typing.Dict[str, typing.Any]:
-    """Return a document that only sets fields in the common schema"""
-    return dict(
-        id = "https://github.com/charlesreid1/centillion-search-demo",
-        kind = "foobar",
-        created_time = datetime.datetime.now(),
-        modified_time = datetime.datetime.now(),
-        indexed_time = datetime.datetime.now(),
-        name = f"file_{ix}.dat",
-    )
-
-
-def get_ghfile_config():
-    """
-    Create a Github file configuration file that tests can use.
-    """
-    return {
-        "doctypes": [{
-            "name": "centillion-test-search-get-local-map",
-            "doctype": "github_file",
-            "access_token": "invalid-access-token",
-            "repos": [
-                "charlesreid1/centillion-search-demo"
-            ]
-        }]
-    }
-
-
-def get_ghfile_doc(ix: int) -> typing.Dict[str, typing.Any]:
-    """Return a document that only sets fields in the Github file schema"""
-    return dict(
-        id = "https://github.com/charlesreid1/centillion-search-demo",
-        kind = "github_file",
-        created_time = datetime.datetime.now(),
-        modified_time = datetime.datetime.now(),
-        #indexed_time = datetime.datetime.now(),
-        name = f"file_{ix}.dat",
-        file_name = f"file_{ix}.dat",
-        file_url = f"https://github.com/charlesreid1/centillion-search-demo/tree/master/file_{ix}.dat",
-        repo_path = f"file_{ix}.dat",
-        github_user = "charlesreid1",
-    )
+from . import (
+    TempCentillionConfig,
+    get_plain_config,
+    get_invalid_ghfile_config,
+    get_plain_doc,
+    get_ghfile_doc,
+)
 
 
 class SearchTest(unittest.TestCase):
@@ -104,7 +53,7 @@ class SearchTest(unittest.TestCase):
         doctype = "github_file"
 
         # Create a Search object
-        with TempCentillionConfig(get_ghfile_config()) as config_file:
+        with TempCentillionConfig(get_invalid_ghfile_config()) as config_file:
             with mock.patch("centillion.doctypes.github.GithubFileDoctype.validate_credentials"):
                 s = Search()
 
