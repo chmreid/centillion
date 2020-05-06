@@ -3,6 +3,7 @@ import functools
 import os
 import time
 import unittest
+from functools import wraps
 
 from centillion.config import Config
 
@@ -54,9 +55,12 @@ def skip_on_travis(test_item):
 
 
 def standalone_test(f):
-    if is_standalone():
+    @wraps(f)
+    def wrapper(self, *args, **kwargs):
         Config(STANDALONE_CONFIG_PATH)
-    return unittest.skipUnless(is_standalone(), "Skipping standalone test")(f)
+        unittest.skipUnless(is_standalone(), "Skipping standalone test")(f)(self)
+        Config.reset()
+    return wrapper
 
 
 def is_standalone():
@@ -64,9 +68,12 @@ def is_standalone():
 
 
 def integration_test(f):
-    if is_integration():
+    @wraps(f)
+    def wrapper(self, *args, **kwargs):
         Config(INTEGRATION_CONFIG_PATH)
-    return unittest.skipUnless(is_integration(), "Skipping integration test")(f)
+        unittest.skipUnless(is_integration(), "Skipping integration test")(f)(self)
+        Config.reset()
+    return wrapper
 
 
 def is_integration():

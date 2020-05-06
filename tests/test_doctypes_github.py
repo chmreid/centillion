@@ -276,6 +276,7 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
     def test_github_issues_prs(self):
         """Test the get_by_id (and get_schema) methods for the Github issue/PR doctype"""
         this_doctype = "github_issue_pr"
+
         doctypes_names_map = Config.get_doctypes_names_map()
         names = doctypes_names_map[this_doctype]
         name = names[0]
