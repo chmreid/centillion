@@ -250,7 +250,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
 
     Subclasses of GithubBaseDoctype must define the following:
     - schema (class attribute)
-    - get_remote_list: list of remote document IDs and last modified date
+    - get_remote_map: list of remote document IDs and last modified date
     - get_by_id: get document by index ID
     - search result template (static)
     """
@@ -348,21 +348,20 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         """
         return template
 
-    def get_remote_list(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
+    def get_remote_map(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
         """
-        Compile a list of document IDs for documents that can be indexed
-        at the remote, and their last modified date.
+        Compile a map of document IDs for documents that can be indexed
+        at the remote, to their last modified date.
 
         Github types use the Github URL for the search index ID.
 
-        :returns: list of tuples (last_modified_date, issue_pr_url)
-                  (types are datetime.datetime and str)
+        :returns: map of issue_pr_url to last_modified_date
         """
         name = self.name
         g = self.g
 
         # Return value: list of (last_modified_date, issue_pr_url) tuples
-        remote_list = []
+        remote_map = {}
 
         # Iterate over each repo and store all keys + modified date
         repos_list = get_github_repos_list(name, g)
@@ -377,9 +376,9 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
                         # Add an item (issue/PR) to the list
                         key = item.html_url
                         date = item.updated_at
-                        remote_list.append((date, key))
+                        remote_map[key] = date
 
-        return remote_list
+        return remote_map
 
     def get_by_id(self, doc_id: str) -> dict:
         """
@@ -560,21 +559,20 @@ class GithubFileDoctype(GithubBaseDoctype):
         """
         return template
 
-    def get_remote_list(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
+    def get_remote_map(self) -> typing.Dict[str, datetime.datetime]:
         """
-        Compile a list of document IDs for documents that can be indexed
-        at the remote, and their last modified date.
+        Compile a map of document IDs for documents that can be indexed
+        at the remote, to their last modified date.
 
         Github types use the Github URL for the search index ID.
 
-        :returns: list of (last_modified_date, issue_pr_url) tuples
-                  (types are datetime.datetime and str)
+        :returns: map of gh_file_url to last_modified_date
         """
         name = self.name
         g = self.g
 
         # Return value: list of (last_modified_date, file_url) tuples
-        remote_list = []
+        remote_map = {}
 
         repos_list = get_github_repos_list(name, g)
         for repo_name in repos_list:
@@ -617,9 +615,9 @@ class GithubFileDoctype(GithubBaseDoctype):
                     # but we can assemble one ourselves.
                     key = get_gh_file_url(repo_name, branch_name, item["path"])
                     date = head_commit.commit.author.date
-                    remote_list.append((date, key))
+                    remote_map[key] = date
 
-        return remote_list
+        return remote_map
 
     def _ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
         """

@@ -24,7 +24,7 @@ class Doctype(metaclass=DoctypeRegistry):
     - constructor: takes credentials as input, validate credentials
     - validate credentials: does what it says
     - schema (class attribute)
-    - get_remote_list: list of remote document IDs and last modified date
+    - get_remote_map: list of remote document IDs and last modified date
     - get_by_id: get document by index ID, return item matching common + doctype schema
     - search result template (static method): render a search result of this doctype
     """
@@ -50,8 +50,8 @@ class Doctype(metaclass=DoctypeRegistry):
     def validate_credentials(self):
         self._not_implemented("validate_credentials")
 
-    def get_remote_list(self):
-        self._not_implemented("get_remote_list")
+    def get_remote_map(self):
+        self._not_implemented("get_remote_map")
 
     def get_by_id(self, doc_id):
         self._not_implemented("get_by_id")
