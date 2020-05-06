@@ -107,15 +107,16 @@ class ConfigTest(unittest.TestCase):
 
     def test_config_class_env_vars(self):
         """
-        Check the ability to access environment variables in the config file
+        Check the ability to access environment variables in the Config class
         """
         temp_config = dict()
         with TempCentillionConfig(temp_config):
-            os.environ["FOO"] = "BAR"
-            self.assertEqual(Config.get_required_env_var("FOO"), "BAR")
-            del os.environ["FOO"]
+            var = "CENTILLION_TEST_FOO"
+            os.environ[var] = "BAR"
+            self.assertEqual(Config.get_required_env_var(var), "BAR")
+            del os.environ[var]
             with self.assertRaises(CentillionConfigException):
-                Config.get_required_env_var("FOO")
+                Config.get_required_env_var(var)
 
     def test_config_class_get_doctypes(self):
         """
