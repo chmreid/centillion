@@ -3,7 +3,7 @@ import typing
 import datetime
 from functools import lru_cache
 from whoosh import index
-from whoosh.qparser import QueryParser, MultifieldParser
+# from whoosh.qparser import QueryParser, MultifieldParser
 from whoosh.fields import Schema
 
 from ..doctypes.doctype import (
@@ -92,12 +92,12 @@ class Search(object):
         indexdir = Config.get_centillion_indexdir()
         self.ix = index.create_in(indexdir, self.schema)
 
-    def sync_documents(self, doctype_list: typing.Optional[typing.List[str]] = None):
+    def sync_documents(self, doctypes_list: typing.Optional[typing.List[str]] = None):
         """
         Synchronize documents (of the specified doctypes) between the remote and the local search index.
         If no doctypes are specified, performs sync for all doctypes.
 
-        :param doctype_list: (optional) list of doctypes to synchronize; if none specified, syncs all doctypes
+        :param list doctype_list: (optional) list of doctypes to synchronize; if none specified, syncs all doctypes
         """
         if doctypes_list is None:
             doctypes_list = Config.get_doctypes()
@@ -121,7 +121,7 @@ class Search(object):
 
             self.add_docs(to_add, doctype_cls)
             self.delete_docs(to_delete)
-            self.update_docs(to_update, remote_map, local_map)
+            self.update_docs(to_update, remote_map, local_map, doctype_cls)
 
     def get_local_map(self, doctype: str) -> typing.Dict[str, datetime.datetime]:
         """
@@ -139,7 +139,7 @@ class Search(object):
                 local_map[doc_id] = doc_date
         return local_map
 
-    def add_docs(self, to_add, doctype_cls) -> None:
+    def add_docs(self, to_add: typing.Set[str], doctype_cls) -> None:
         """
         Add all documents in a list of document IDs. Called once per doctype.
 
@@ -180,6 +180,7 @@ class Search(object):
         to_update: typing.Set[str],
         remote_map: typing.Dict[str, datetime.datetime],
         local_map: typing.Dict[str, datetime.datetime],
+        doctype_cls
     ) -> None:
         """
         Given a list of document IDs that exist both at the remote and in the local index,
@@ -188,6 +189,7 @@ class Search(object):
         :param set to_update: set of document IDs that exist in index and in remote
         :param dict remote_map: map of remote document IDs to remote date modified
         :param dict local_map: map of local index document IDs to local index date modified
+        :param doctype_cls: reference to Doctype class for this document
         """
         writer = self.ix.writer()
         for doc_id in to_update:
