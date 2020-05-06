@@ -8,7 +8,6 @@ from centillion.search import Search
 from centillion.doctypes.doctype import Doctype
 
 from .context import TempCentillionConfig
-from .doctypes import plain
 from .util_configs import (
     get_plain_config,
     get_invalid_ghfile_config,

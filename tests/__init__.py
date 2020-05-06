@@ -1,6 +1,9 @@
 import os
 import logging
 
+# These imports register the test doctypes in the doctype registry
+from .doctypes import plain  # noqa
+
 
 logger = logging.getLogger(__name__)
 

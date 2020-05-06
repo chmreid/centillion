@@ -1,4 +1,5 @@
 import typing
+
 from centillion.doctypes.doctype import Doctype
 
 
