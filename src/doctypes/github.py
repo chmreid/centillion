@@ -348,7 +348,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         """
         return template
 
-    def get_remote_map(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
+    def get_remote_map(self) -> typing.Dict[str, datetime.datetime]:
         """
         Compile a map of document IDs for documents that can be indexed
         at the remote, to their last modified date.
