@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from . import TempCentillionConfig
+from .context import TempCentillionConfig
 
 
 def get_simple_config():

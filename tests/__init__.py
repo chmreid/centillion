@@ -1,16 +1,6 @@
 import os
 import logging
 
-from .context import TempCentillionConfig
-from .util_configs import (
-    get_plain_config,
-    get_invalid_ghfile_config,
-)
-from .util_searchdocs import (
-    get_plain_doc,
-    get_ghfile_doc,
-)
-
 
 logger = logging.getLogger(__name__)
 

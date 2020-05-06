@@ -7,7 +7,6 @@ import tempfile
 from io import StringIO
 
 from centillion.config import Config
-from centillion.error import CentillionConfigException
 
 
 logger = logging.getLogger(__name__)

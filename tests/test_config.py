@@ -1,8 +1,4 @@
 import os
-import shutil
-# import json
-# import tempfile
-# import subprocess
 import unittest
 
 from centillion.error import CentillionConfigException
@@ -13,8 +9,8 @@ from .context import TempCentillionConfig
 
 def get_config_multiple_doctypes():
     doctype_list = [
-        "gdrive_docx", 
-        "gdrive_file", 
+        "gdrive_docx",
+        "gdrive_file",
         "github_issues_prs",
     ]
     doctype_list.sort()
@@ -125,8 +121,8 @@ class ConfigTest(unittest.TestCase):
         """
         Check the ability to get a list of active doctypes in the config file
         """
-        doctypes, temp_config = get_config_multiple_doctypes() 
-        with TempCentillionConfig(temp_config) as temp_config_file:
+        doctypes, temp_config = get_config_multiple_doctypes()
+        with TempCentillionConfig(temp_config):
             config_doctypes = Config.get_doctypes()
             self.assertEqual(doctypes, config_doctypes)
 
@@ -135,7 +131,7 @@ class ConfigTest(unittest.TestCase):
         Check the abiltiy to get the configuration section for a particular doctype
         """
         doctypes, temp_config = get_config_multiple_doctypes()
-        with TempCentillionConfig(temp_config) as temp_config_file:
+        with TempCentillionConfig(temp_config):
             for doctype_config_entry in temp_config['doctypes']:
                 name = doctype_config_entry['name']
                 doctype_config = Config.get_doctype_config(name)
