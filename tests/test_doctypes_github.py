@@ -268,9 +268,9 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         pass
 
     @integration_test
-    def test_get_remote_list(self):
+    def test_get_remote_map(self):
         doctypes_names_map = Config.get_doctypes_names_map()
-        self.check_doctype_remote_list(GITHUB_DOCTYPES, doctypes_names_map)
+        self.check_doctype_remote_map(GITHUB_DOCTYPES, doctypes_names_map)
 
     @integration_test
     def test_github_issues_prs(self):
