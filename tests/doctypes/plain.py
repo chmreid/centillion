@@ -24,14 +24,15 @@ class PlainDoctype(Doctype):
     schema: Doctype.common_schema
 
     # Define a registry of documents to return in remote_list
-    document_registry = []
+    document_registry: typing.List[typing.Any] = []
 
     def __init__(self, *args, **kwargs):
         self.name = args[0]
 
-    def register_document(self, doc):
-        if doc not in PlainDoctype.document_registry:
-            PlainDoctype.document_registry.append(doc)
+    @classmethod
+    def register_document(cls, doc):
+        if doc not in cls.document_registry:
+            cls.document_registry.append(doc)
 
     def validate_credentials(self):
         pass
