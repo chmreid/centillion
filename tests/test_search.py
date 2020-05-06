@@ -49,8 +49,7 @@ class SearchTest(unittest.TestCase):
         for j in range(1, 5):
             doc = get_plain_doc(j)
             doctype_cls.register_document(doc)
-
-        docs = [get_plain_doc(j) for j in range(4)]
+            docs.append(doc)
 
         # Temp config file context manager must wrap all subtests
         with TempCentillionConfig(get_plain_config()):
@@ -70,10 +69,17 @@ class SearchTest(unittest.TestCase):
                     self.assertEqual(type(map_val), datetime.datetime)
 
             with self.subTest("Test UPDATE plain docs"):
-                pass
+                fname = 'dingbat.dat'
+                doc = docs.pop()
+                doc['name'] = fname
+                loc_map = s.get_local_map(doctype)
+                self.assertGreater(len(loc_map), 0)
+                # do a query for name field, dingbat
+                # assert results length greater than 0
 
             with self.subTest("Test DELETE plain docs"):
-                pass
+                doc_ids = [doc['id'] for doc in docs]
+                s.delete_docs(doc_ids)
 
     def test_get_local_map(self):
         """Test the get_local_map method of the Search class"""
