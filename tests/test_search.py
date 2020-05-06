@@ -1,4 +1,5 @@
 import unittest
+import datetime
 from unittest import mock
 from whoosh.fields import Schema
 
@@ -7,6 +8,7 @@ from centillion.search import Search
 from centillion.doctypes.doctype import Doctype
 
 from .context import TempCentillionConfig
+from .doctypes import plain
 from .util_configs import (
     get_plain_config,
     get_invalid_ghfile_config,
@@ -35,29 +37,34 @@ class SearchTest(unittest.TestCase):
             # These should be equal, since get_plain_config() does not specify any doctypes
             self.assertEqual(common_schema, search_schema)
 
-    def test_add_plain_doc(self):
-        """Test the ability to add a plain document to the search index"""
+    def test_crud_plain_doc(self):
+        """
+        Test the ability to create/read/update/delete a plain document (a doc whose schema is the common schema)
+        in a centillion search index.
+        """
+        doctype = "plain"
+        docs = [get_plain_doc(j) for j in range(4)]
+
         with TempCentillionConfig(get_plain_config()):
-            # Common schema
-            # s = Search()
-            docs = [get_plain_doc(j) for j in range(4)]
-            self.assertTrue(len(docs) > 0)
+            s = Search()
 
-        # assert doc not in search index
-        # add doc to search index
-        # assert doc is in search index
-        pass
+            with self.subTest("Test add plain docs"):
+                # Common schema
+                for doc in docs:
+                    s.add_doc(doc)
 
-    def test_delete_plain_doc(self):
-        # (add doc to search index)
-        # assert doc is in search index
-        # delete doc to search index
-        # assert doc not in search index
-        pass
+            with self.subTest("Test read plain docs"):
+                # Call get_local_map and verify all is ok
+                loc_map = s.get_local_map(doctype)
+                self.assertGreater(len(loc_map), 0)
+                for map_key, map_val in loc_map.items():
+                    self.assertEqual(type(map_key), str)
+                    self.assertEqual(type(map_val), datetime.datetime)
 
     def test_get_local_map(self):
         """Test the get_local_map method of the Search class"""
         doctype = "github_file"
+        docs = [get_ghfile_doc(j) for j in range(4)]
 
         # Create a Search object
         with TempCentillionConfig(get_invalid_ghfile_config()):
@@ -65,15 +72,15 @@ class SearchTest(unittest.TestCase):
                 s = Search()
 
                 # Add fake docs to the index
-                docs = [get_ghfile_doc(j) for j in range(4)]
                 for doc in docs:
                     s.add_doc(doc)
 
                 # Call get_local_map and verify all is ok
                 loc_map = s.get_local_map(doctype)
                 self.assertGreater(len(loc_map), 0)
-                for map_key, map_value in loc_map.items():
+                for map_key, map_val in loc_map.items():
                     self.assertEqual(type(map_key), str)
+                    self.assertEqual(type(map_val), datetime.datetime)
 
 
 if __name__ == "__main__":
