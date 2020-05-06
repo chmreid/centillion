@@ -10,7 +10,9 @@ class DoctypeTestMixin(unittest.TestCase):
     """
     Adds a check for given doctypes in a given config file.
 
-    This constructs an instance of each doctype and calls _action() with it.
+    This class provides one main method, _iterate_doctypes.
+    This method constructs an instance of each doctype class,
+    and calls an action on it.
     """
 
     def _iterate_doctypes(
@@ -33,8 +35,7 @@ class DoctypeTestMixin(unittest.TestCase):
             self.assertIn(doctype, doctypes_names_map)
             names = doctypes_names_map[doctype]
             name = names[0]
-            msg = f"Check doctype constructor for {doctype} using credentials {name}"
-            with self.subTest(msg):
+            with self.subTest(f"Check doctype constructor for {doctype} using credentials {name}"):
 
                 # Doctype gives name, name is passed to constructor.
                 # Doctype gives class ref via registry.
@@ -43,7 +44,7 @@ class DoctypeTestMixin(unittest.TestCase):
 
                 # Make the doctype class (also performs credentials validation).
                 doctype = DoctypeCls(name)
-                self._action(doctype)
+                action(doctype)
 
 
 class ConstructorTestMixin(DoctypeTestMixin):
@@ -54,12 +55,12 @@ class ConstructorTestMixin(DoctypeTestMixin):
     def check_doctype_constructors(self, *args, **kwargs):
         """
         Iterate over each doctype in doctypes_to_check, assemble an instance of each class.
-        Then call _action() on each one (to test constructor, do nothing).
+        Then call action on each one (to test constructor, do nothing).
 
         :param doctypes_to_check: list of strings of doctypes to check
         :param doctypes_names_map: map of doctypes to list of names of credentials matching that doctype
         """
-        def _action(self, doctype):
+        def _action(doctype):
             """Let _iterate_doctypes() do all the work of calling constructors"""
             pass
 
@@ -72,7 +73,7 @@ class RemoteListTestMixin(DoctypeTestMixin):
     Adds a check for the remote_list function of a given doctype in a given config file.
     """
 
-    def check_doctype_remote_list(self, *args, **kwargs):
+    def check_doctype_remote_map(self, *args, **kwargs):
         """
         Given a map of doctypes to credential names, get the type of each name
         and call the constructor of that class. Requires real credentials.
@@ -80,12 +81,12 @@ class RemoteListTestMixin(DoctypeTestMixin):
         :param doctypes_to_check: list of strings of doctypes to check
         :param doctypes_names_map: map of doctypes to list of names of credentials matching that doctype
         """
-        def _action(self, doctype):
-            doctype.remote_list()
-            # Verify doctype list consists of (datetime, type) tuples
-            for date, name in doctype.remote_list():
+        def _action(doctype):
+            remote_map = doctype.get_remote_map()
+            # Verify remote map is a map of strings to dates
+            for name, date in remote_map.items():
+                self.assertEqual(type(name), str)
                 self.assertEqual(type(date), datetime.datetime)
-                self.assertEqual(type(name), type(""))
 
         self._iterate_doctypes(*args, **kwargs, action=_action)
 
