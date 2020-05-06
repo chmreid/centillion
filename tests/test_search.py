@@ -6,6 +6,7 @@ from whoosh.fields import Schema
 # from centillion.config import Config
 from centillion.search import Search
 from centillion.doctypes.doctype import Doctype
+from centillion.doctypes.registry import DoctypeRegistry
 
 from .context import TempCentillionConfig
 from .util_configs import (
@@ -42,23 +43,37 @@ class SearchTest(unittest.TestCase):
         in a centillion search index.
         """
         doctype = "plain"
+        doctype_cls = DoctypeRegistry.REGISTRY['plain']
+
+        docs = []
+        for j in range(1, 5):
+            doc = get_plain_doc(j)
+            doctype_cls.register_document(doc)
+
         docs = [get_plain_doc(j) for j in range(4)]
 
+        # Temp config file context manager must wrap all subtests
         with TempCentillionConfig(get_plain_config()):
             s = Search()
 
-            with self.subTest("Test add plain docs"):
+            with self.subTest("Test CREATE plain docs"):
                 # Common schema
                 for doc in docs:
                     s.add_doc(doc)
 
-            with self.subTest("Test read plain docs"):
+            with self.subTest("Test READ plain docs"):
                 # Call get_local_map and verify all is ok
                 loc_map = s.get_local_map(doctype)
                 self.assertGreater(len(loc_map), 0)
                 for map_key, map_val in loc_map.items():
                     self.assertEqual(type(map_key), str)
                     self.assertEqual(type(map_val), datetime.datetime)
+
+            with self.subTest("Test UPDATE plain docs"):
+                pass
+
+            with self.subTest("Test DELETE plain docs"):
+                pass
 
     def test_get_local_map(self):
         """Test the get_local_map method of the Search class"""
