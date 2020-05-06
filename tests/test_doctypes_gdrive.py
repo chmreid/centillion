@@ -114,9 +114,9 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         pass
 
     @integration_test
-    def test_get_remote_list(self):
+    def test_get_remote_map(self):
         doctypes_names_map = Config.get_doctypes_names_map()
-        self.check_doctype_remote_list(GDRIVE_DOCTYPES, doctypes_names_map)
+        self.check_doctype_remote_map(GDRIVE_DOCTYPES, doctypes_names_map)
 
     @integration_test
     def test_gdrive_file(self):
