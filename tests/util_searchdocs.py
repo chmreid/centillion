@@ -10,7 +10,7 @@ def get_plain_doc(ix: int) -> typing.Dict[str, typing.Any]:
     """Return a document that only sets fields in the common schema"""
     return dict(
         id="https://github.com/charlesreid1/centillion-search-demo",
-        kind="not_a_real_doctype",
+        kind="plain",
         created_time=datetime.datetime.now(),
         modified_time=datetime.datetime.now(),
         indexed_time=datetime.datetime.now(),
