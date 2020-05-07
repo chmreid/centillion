@@ -291,7 +291,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             kind=self.doctype,
             created_time=dateutil.parser.parse(item["createdTime"]),
             modified_time=dateutil.parser.parse(item["modifiedTime"]),
-            indexed_time=datetime.datetime.now(),
+            indexed_time=datetime.datetime.now().replace(microsecond=0),
             name=item["name"],
             file_name=item["name"],
             file_url=item["webViewLink"],
