@@ -123,6 +123,15 @@ class Search(object):
             self.delete_docs(to_delete)
             self.update_docs(to_update, remote_map, local_map, doctype_cls)
 
+    def get_by_id(self, doc_id):
+        """
+        Get a particular document using its id
+        """
+        with self.ix.searcher() as s:
+            kw = {SCHEMA_LABELS_ID: doc_id}
+            for doc in s.documents(**kw):
+                yield doc
+
     def get_local_map(self, doctype: str) -> typing.Dict[str, datetime.datetime]:
         """
         Compile a map of document IDs (in the index) to last modified date.
