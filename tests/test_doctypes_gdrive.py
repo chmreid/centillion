@@ -49,7 +49,7 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
     Test Google Drive doctypes.
     """
 
-    def test_doctypes(self):
+    def test_doctype_names(self):
         """Test the doctype attribute of each GDrive doctype"""
         self.assertEqual(GDriveBaseDoctype.doctype, "gdrive_base")
         self.assertEqual(GDriveFileDoctype.doctype, "gdrive_file")
