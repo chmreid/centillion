@@ -35,11 +35,15 @@ List of tests, in logical order, and a brief description of what it tests:
 
 - `test_config.py` tests the static Config class
 
+- `test_context.py` tests context managers used in tests
+
 - `test_doctypes.py` tests the base Doctype class and related utilities
+
+- `test_doctypes_gdrive.py` tests all Google Drive Doctype classes and related utilities 
 
 - `test_doctypes_github.py` tests all Github Doctype classes and related utilities
 
-- `test_doctypes_gdrive.py` tests all Google Drive Doctype classes and related utilities 
+- `test_search.py` tests the search submodule
 
 ## Test Support 
 
@@ -52,4 +56,8 @@ Support for testing is provided by several modules:
 * `fixtures.py` defines test fixtures that are generally useful for multiple tests
 
 * `mixins.py` defines mixin classes for methods used by multiple tests
+
+* `util_configs.py` defines configuration dictionaries useful in tests
+
+* `util_searchdocs.py` defines JSON documents useful in search tests
 
