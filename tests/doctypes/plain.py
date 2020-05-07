@@ -1,4 +1,5 @@
 import typing
+import datetime
 
 from centillion.doctypes.doctype import Doctype
 
@@ -17,11 +18,11 @@ class PlainDoctype(Doctype):
     contains a document registry, and each document that should be
     present in the remote_list must be registered first.
 
-    See the register() method.
+    See the register_document() method.
     """
     doctype = "plain"
     name: typing.Optional[str] = None
-    schema: Doctype.common_schema
+    schema: typing.Dict[str, typing.Any] = {}
 
     # Define a registry of documents to return in remote_list
     document_registry: typing.List[typing.Any] = []
@@ -37,5 +38,18 @@ class PlainDoctype(Doctype):
     def validate_credentials(self):
         pass
 
-    def get_remote_map(self):
+    @classmethod
+    def get_remote_map(cls) -> typing.Dict[str, datetime.datetime]:
+        remote_map: typing.Dict[str, datetime.datetime] = {}
+        for doc in cls.document_registry:
+            remote_map[doc['id']] = doc['modified_time']
+        return remote_map
+
+    @classmethod
+    def get_by_id(cls, doc_id):
+        for doc in cls.document_registry:
+            if doc['id'] == doc_id:
+                return doc
+
+    def render_search_results(cls, whoosh_search_result):
         pass
