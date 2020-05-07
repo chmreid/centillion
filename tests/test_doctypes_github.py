@@ -273,16 +273,17 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         self.check_doctype_remote_map(GITHUB_DOCTYPES, doctypes_names_map)
 
     @integration_test
-    def test_github_issues_prs(self):
-        """Test the get_by_id (and get_schema) methods for the Github issue/PR doctype"""
+    def test_github_issues_prs_get_by_id(self):
+        """Test the get_by_id methods for the Github issue/PR doctype"""
         this_doctype = "github_issue_pr"
 
+        # Get a github issue/pr doctype with real credentials from the integration config file
         doctypes_names_map = Config.get_doctypes_names_map()
         names = doctypes_names_map[this_doctype]
         name = names[0]
         doctype = GithubIssuePRDoctype(name)
 
-        # Test an issue
+        # Test a real issue
         issue_id = "https://github.com/charlesreid1/centillion-search-demo/issues/1"
         doc = doctype.get_by_id(issue_id)
         self.assertEqual(issue_id, doc["id"])
@@ -293,16 +294,18 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         self.assertEqual("charlesreid1/centillion-search-demo", doc["repo_name"])
         self.assertIn("certain Seattle drivers", doc["content"])
 
-        # Test a pull request (TBA)
+        # Test a real pull request (TBA)
 
     @integration_test
-    def test_github_files(self):
-        """Test the get_by_id (and get_schema) methods for the Github file doctype"""
+    def test_github_files_get_by_id(self):
+        """Test the get_by_id methods for the Github file doctype"""
+        # Test with real github file (TBA)
         pass
 
     @integration_test
-    def test_github_markdown(self):
-        """Test the get_by_id (and get_schema) methods for the Github markdown doctype"""
+    def test_github_markdown_get_by_id(self):
+        """Test the get_by_id methods for the Github markdown doctype"""
+        # Test with real github markdown (TBA)
         pass
 
     def _get_github_doctype_classes(self) -> typing.List[object]:
