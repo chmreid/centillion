@@ -122,8 +122,6 @@ class SearchTest(unittest.TestCase):
                 search_ix_doc = s.get_by_id(doc_id)
                 self.assertNotEqual(search_ix_doc['name'], dummy_name)
 
-                time.sleep(1)
-
                 # Now pop the doc from the PlainDoctype registry, modify it, and put it back
                 doc = doctype_cls.document_registry.pop()
                 doc_id = doc['id']
