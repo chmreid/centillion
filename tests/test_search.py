@@ -192,6 +192,23 @@ class SearchTest(unittest.TestCase):
                 for doc_id in doc_ids_list:
                     self.assertEqual(s.get_by_id(doc_id), None)
 
+            with self.subTest("Test delete_doc with individual IDs"):
+                for doc in docs:
+                    s.add_doc(doc)
+                    PlainDoctype.register_document(doc)
+
+                # Ensure added
+                for doc_id in doc_ids_list:
+                    self.assertNotEqual(s.get_by_id(doc_id), None)
+
+                # Test delete using individual IDs
+                for doc_id in doc_ids_list:
+                    s.delete_doc(doc_id)
+
+                # Ensure deleted
+                for doc_id in doc_ids_list:
+                    self.assertEqual(s.get_by_id(doc_id), None)
+
     def test_crud_plain_doc(self):
         """
         Test the ability to create/read/update/delete a plain document (a doc whose schema is the common schema)
