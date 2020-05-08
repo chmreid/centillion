@@ -31,6 +31,16 @@ class PlainDoctypeTest(unittest.TestCase):
         name = "centillion-test-doctypes-tests-plain-doctype-name"
         PlainDoctype(name)
 
+    def test_register_documents(self):
+        docs = get_plain_docs()
+        for doc in docs:
+            PlainDoctype.register_document(doc)
+        self.assertEqual(len(docs), len(PlainDoctype.document_registry.keys()))
+        # Check that individual fields are equal
+        for ok_doc, (_, check_doc) in zip(docs, PlainDoctype.document_registry.items()):
+            for key in ok_doc.keys():
+                self.assertEqual(ok_doc[key], check_doc[key])
+
     def test_get_remote_map(self):
         remote_map = PlainDoctype.get_remote_map()
         for k, v in remote_map.items():
@@ -44,10 +54,9 @@ class PlainDoctypeTest(unittest.TestCase):
             # Add each doc
             for doc in docs:
                 PlainDoctype.register_document(doc)
+            self.assertEqual(len(docs), len(PlainDoctype.document_registry.keys()))
 
-            self.assertEqual(len(docs), len(PlainDoctype.document_registry))
-
-            # Now check that the doc returned by get_by_id() is the same
+            # Check that the doc returned by get_by_id() is the same
             for local_doc in docs:
                 doc_id = local_doc['id']
                 remote_doc = PlainDoctype.get_by_id(doc_id)
