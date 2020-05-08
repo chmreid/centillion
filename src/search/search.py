@@ -92,36 +92,49 @@ class Search(object):
         indexdir = Config.get_centillion_indexdir()
         self.ix = index.create_in(indexdir, self.schema)
 
-    def sync_documents(self, doctypes_list: typing.Optional[typing.List[str]] = None):
+    def sync_documents(
+        self,
+        credentials_list: typing.Optional[typing.List[str]] = None,
+        doctypes_list: typing.Optional[typing.List[str]] = None
+    ):
         """
         Synchronize documents (of the specified doctypes) between the remote and the local search index.
         If no doctypes are specified, performs sync for all doctypes.
 
         :param list doctype_list: (optional) list of doctypes to synchronize; if none specified, syncs all doctypes
         """
+        doctypes_names_map = Config.get_doctypes_names_map()
+
+        # Iterate over each doctype
         if doctypes_list is None:
             doctypes_list = Config.get_doctypes()
 
-        # For each doctype, perform sync operation
         for doctype in doctypes_list:
-            doctype_cls = Doctype.REGISTRY[doctype]
 
-            # Get remote map
-            remote_map = doctype_cls.get_remote_map()
-            remote_items = set(remote_map.keys())
+            if credentials_list is None:
+                credentials_names = doctypes_names_map[doctype]
 
-            # Get local map
-            local_map = self.get_local_map(doctype)
-            local_items = set(local_map.keys())
+            # Within each doctype, iterate over each set of credentials
+            for cred_name in credentials_names:
+                doctype_instance = Doctype.REGISTRY[doctype](cred_name)
 
-            # Some set math
-            to_add = remote_items - local_items
-            to_delete = local_items - remote_items
-            to_update = remote_items.intersection(local_items)
+                # Get remote map
+                remote_map = doctype_instance.get_remote_map()
+                remote_items = set(remote_map.keys())
 
-            self.add_docs(to_add, doctype_cls)
-            self.delete_docs(to_delete)
-            self.update_docs(to_update, remote_map, local_map, doctype_cls)
+                # Get local map
+                local_map = self.get_local_map(doctype)
+                local_items = set(local_map.keys())
+
+                # Some set math
+                to_add = remote_items - local_items
+                to_delete = local_items - remote_items
+                to_update = remote_items.intersection(local_items)
+
+                # Carry out orders
+                self.add_docs(to_add, doctype_instance)
+                self.delete_docs(to_delete)
+                self.update_docs(to_update, remote_map, doctype_instance)
 
     def get_by_id(self, doc_id):
         """
@@ -148,28 +161,36 @@ class Search(object):
                 local_map[doc_id] = doc_date
         return local_map
 
-    def add_docs(self, to_add: typing.Set[str], doctype_cls) -> None:
+    def add_docs(
+        self,
+        to_add: typing.Union[typing.List[str], typing.Set[str]],
+        doctype_instance
+    ) -> None:
         """
-        Add all documents in a list of document IDs. Called once per doctype.
+        Automatically add documents whose IDs are in the set to_add
+        to the search index. Automatically uses get_by_id in Doctype class.
 
         :param set to_add: set of document IDs to add to the index
-        :param doctype_cls: reference to the doctype class for these documents
+        :param doctype_instance: reference to the doctype class for these documents
         """
         writer = self.ix.writer()
         for a in to_add:
-            doc = doctype_cls.get_by_id(a)
+            doc = doctype_instance.get_by_id(a)
             writer.add_document(**doc)
         writer.commit()
 
     def add_doc(self, doc: typing.Dict[str, typing.Any]) -> None:
-        """Add a single document to the search index"""
+        """Manually add a single JSON document to the search index"""
         writer = self.ix.writer()
         writer.add_document(**doc)
         writer.commit()
 
-    def delete_docs(self, to_delete) -> None:
+    def delete_docs(
+        self,
+        to_delete: typing.Union[typing.List[str], typing.Set[str]],
+    ) -> None:
         """
-        Delete all documents in a list of document IDs from the local index. Called once per doctype.
+        Delete all documents in a set of document IDs from the local index. Called once per doctype.
 
         :param set to_delete: set of document IDs to delete
         """
@@ -186,28 +207,31 @@ class Search(object):
 
     def update_docs(
         self,
-        to_update: typing.Set[str],
-        remote_map: typing.Dict[str, datetime.datetime],
-        local_map: typing.Dict[str, datetime.datetime],
-        doctype_cls
+        to_update: typing.Union[typing.List[str], typing.Set[str]],
+        doctype_instance,
+        remote_map: typing.Optional[typing.Dict[str, datetime.datetime]] = None,
     ) -> None:
         """
         Given a list of document IDs that exist both at the remote and in the local index,
         determine which documents to update, and update them.
 
+        The remote_map parameter can optionally be passed in, if it requires time/API calls to assemble.
+        If it is left out, we use the doctype_instance to get a fresh remote map.
+
         :param set to_update: set of document IDs that exist in index and in remote
-        :param dict remote_map: map of remote document IDs to remote date modified
-        :param dict local_map: map of local index document IDs to local index date modified
-        :param doctype_cls: reference to Doctype class for this document
+        :param doctype_instance: instance of the Doctype class for the documents being updated
+        :param dict remote_map: (optional) map of remote document IDs to remote date modified
         """
         writer = self.ix.writer()
+        if remote_map is None:
+            remote_map = doctype_instance.get_remote_map()
+        local_map = self.get_local_map(doctype_instance.doctype)
         for doc_id in to_update:
             remote_modified = remote_map[doc_id]
             local_modified = local_map[doc_id]
-            # Compare dates
-            # If remote modified is more recent, update doc
+            # Compare dates, update doc in search index with remote if remote is newer
             if remote_modified > local_modified:
-                doc = doctype_cls.get_by_id(doc_id)
+                doc = doctype_instance.get_by_id(doc_id)
                 writer.update_document(**doc)
         writer.commit()
 
