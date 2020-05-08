@@ -19,11 +19,10 @@ tests:=$(wildcard tests/test_*.py)
 
 test: $(tests)
 	@echo $(tests)
-	pytest $(tests)
 
 # A pattern rule that runs a single test script
 $(tests): %.py : mypy lint
-	pytest -v $*.py
+	pytest --cov=centillion -v $*.py
 
 all_test:
 	$(MAKE) CENTILLION_TEST_MODE="standalone integration" test
