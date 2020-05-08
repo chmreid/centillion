@@ -130,7 +130,7 @@ class Search(object):
         with self.ix.searcher() as s:
             kw = {SCHEMA_LABELS_ID: doc_id}
             for doc in s.documents(**kw):
-                yield doc
+                return doc
 
     def get_local_map(self, doctype: str) -> typing.Dict[str, datetime.datetime]:
         """
@@ -208,7 +208,7 @@ class Search(object):
             # If remote modified is more recent, update doc
             if remote_modified > local_modified:
                 doc = doctype_cls.get_by_id(doc_id)
-                writer.update_document(doc)
+                writer.update_document(**doc)
         writer.commit()
 
     def search(self):
