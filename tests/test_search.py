@@ -3,7 +3,7 @@ import datetime
 from unittest import mock
 from whoosh.fields import Schema
 
-from centillion.config import Config
+# from centillion.config import Config
 from centillion.search import Search
 from centillion.doctypes.doctype import Doctype
 from centillion.doctypes.registry import DoctypeRegistry
