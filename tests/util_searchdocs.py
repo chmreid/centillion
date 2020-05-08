@@ -20,14 +20,16 @@ def get_plain_doc(ix: int) -> typing.Dict[str, typing.Any]:
     )
 
 
-def get_plain_docs(n: int = 5) -> typing.List[typing.Dict[str, typing.Any]]:
+def get_plain_docs(n: int = 5) -> typing.Tuple[typing.Any, typing.List[typing.Dict[str, typing.Any]]]:
     """Get a list of N fake plain docs"""
+    name = 'centillion-test-search-util-searchdocs-get-plain-docs'
     docs: typing.List[typing.Any] = []
     doctype = "plain"
     doctype_cls = DoctypeRegistry.REGISTRY[doctype]
+    doctype_instance = doctype_cls(name)
     for j in range(1, n+1):
         doc = get_plain_doc(j)
-        doctype_cls.register_document(doc)
+        doctype_instance.register_document(doc)
         docs.append(doc)
     return docs
 
