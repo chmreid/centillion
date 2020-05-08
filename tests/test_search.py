@@ -38,12 +38,13 @@ class SearchTest(unittest.TestCase):
             # These should be equal, since get_plain_config() does not specify any doctypes
             self.assertEqual(common_schema, search_schema)
 
-    def test_search_add_doc(self):
+    def test_search_add_docs(self):
         """
         Test the add_doc functionality of the Search class.
 
         This method tests these Search class methods:
         - add_doc
+        - add_docs
         - get_local_map
         - get_by_id
         """
@@ -59,31 +60,6 @@ class SearchTest(unittest.TestCase):
                 for doc in docs:
                     s.add_doc(doc)
                     doctype_instance.register_document(doc)
-
-            with self.subTest("Test get_by_id method of Search class"):
-                # Access each document using get_by_id
-                for doc in docs:
-                    doc_id = doc['id']
-                    search_ix_doc = s.get_by_id(doc_id)
-                    # Check the search index is not just returning the id field
-                    self.assertTrue(len(search_ix_doc.keys()) > 1)
-                    # Check each field in the original document is in search index document
-                    for k in doc.keys():
-                        self.assertEqual(doc[k], search_ix_doc[k])
-
-            with self.subTest("Test get_local_map method of Search class"):
-                loc_map = s.get_local_map(doctype)
-                # Check type/size of resulting map
-                self.assertEqual(type(loc_map), type({}))
-                self.assertGreater(len(loc_map), 0)
-                # Check the types of the key, value pairs
-                for k, v in loc_map.items():
-                    self.assertEqual(type(k), str)
-                    self.assertEqual(type(v), datetime.datetime)
-                # Check that each document added to the search index is in the local_map
-                for doc in docs:
-                    doc_id = doc['id']
-                    self.assertIn(doc_id, loc_map.keys())
 
     def test_search_update_docs(self):
         """
@@ -209,65 +185,60 @@ class SearchTest(unittest.TestCase):
                 for doc_id in doc_ids_list:
                     self.assertEqual(s.get_by_id(doc_id), None)
 
-    def test_crud_plain_doc(self):
+    def test_get_by_id(self):
         """
-        Test the ability to create/read/update/delete a plain document (a doc whose schema is the common schema)
-        in a centillion search index.
+        Test the get_by_id method of the Search class.
         """
         doctype = "plain"
-        # doctype_cls = DoctypeRegistry.REGISTRY[doctype]
+        name = "centillion-test-search-get-by-id"
+        doctype_instance = DoctypeRegistry.REGISTRY[doctype](name)
         docs = get_plain_docs()
-        fname = 'centillion-test-search-file-dingbat.dat'
 
-        # Temp config file context manager must wrap all subtests
         with TempCentillionConfig(get_plain_config()):
             s = Search()
 
-            with self.subTest("Test CREATE plain docs"):
-                # Common schema
-                for doc in docs:
-                    s.add_doc(doc)
+            for doc in docs:
+                s.add_doc(doc)
+                doctype_instance.register_document(doc)
 
-            with self.subTest("Test READ plain docs"):
-                # Call get_local_map and verify all is ok
-                loc_map = s.get_local_map(doctype)
-                self.assertGreater(len(loc_map), 0)
-                for map_key, map_val in loc_map.items():
-                    self.assertEqual(type(map_key), str)
-                    self.assertEqual(type(map_val), datetime.datetime)
+            # Access each document using get_by_id
+            for doc in docs:
+                doc_id = doc['id']
+                search_ix_doc = s.get_by_id(doc_id)
+                # Check the search index is not just returning the id field
+                self.assertTrue(len(search_ix_doc.keys()) > 1)
+                # Check each field in the original document is in search index document
+                for k in doc.keys():
+                    self.assertEqual(doc[k], search_ix_doc[k])
 
-            with self.subTest("Test UPDATE plain docs"):
-                doc = docs.pop()
-                doc['name'] = fname
-                loc_map = s.get_local_map(doctype)
-                self.assertGreater(len(loc_map), 0)
-                # do a query for name field, dingbat
-                # assert results length greater than 0
+    def test_local_map(self):
+        """
+        Test the get_local_map method of the Search class.
+        """
+        doctype = "plain"
+        name = "centillion-test-search-local-map"
+        doctype_instance = DoctypeRegistry.REGISTRY[doctype](name)
+        docs = get_plain_docs()
 
-            with self.subTest("Test DELETE plain docs"):
-                doc_ids = [doc['id'] for doc in docs]
-                s.delete_docs(doc_ids)
+        with TempCentillionConfig(get_plain_config()):
+            s = Search()
 
-    def test_get_local_map(self):
-        """Test the get_local_map method of the Search class"""
-        doctype = "github_file"
-        docs = [get_ghfile_doc(j) for j in range(4)]
+            for doc in docs:
+                s.add_doc(doc)
+                doctype_instance.register_document(doc)
 
-        # Create a Search object
-        with TempCentillionConfig(get_invalid_ghfile_config()):
-            with mock.patch("centillion.doctypes.github.GithubFileDoctype.validate_credentials"):
-                s = Search()
-
-                # Add fake docs to the index
-                for doc in docs:
-                    s.add_doc(doc)
-
-                # Call get_local_map and verify all is ok
-                loc_map = s.get_local_map(doctype)
-                self.assertGreater(len(loc_map), 0)
-                for map_key, map_val in loc_map.items():
-                    self.assertEqual(type(map_key), str)
-                    self.assertEqual(type(map_val), datetime.datetime)
+            loc_map = s.get_local_map(doctype)
+            # Check type/size of resulting map
+            self.assertEqual(type(loc_map), type({}))
+            self.assertGreater(len(loc_map), 0)
+            # Check the types of the key, value pairs
+            for k, v in loc_map.items():
+                self.assertEqual(type(k), str)
+                self.assertEqual(type(v), datetime.datetime)
+            # Check that each document added to the search index is in the local_map
+            for doc in docs:
+                doc_id = doc['id']
+                self.assertIn(doc_id, loc_map.keys())
 
 
 if __name__ == "__main__":
