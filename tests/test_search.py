@@ -1,3 +1,4 @@
+import time
 import unittest
 import datetime
 from unittest import mock
@@ -49,13 +50,11 @@ class SearchTest(unittest.TestCase):
         doctype = "plain"
         doctype_cls = DoctypeRegistry.REGISTRY[doctype]
         docs = get_plain_docs()
-        # fname = 'centillion-test-search-foobar-dingbat.dat'
 
         with TempCentillionConfig(get_plain_config()):
             s = Search()
 
             with self.subTest("Test add_doc method of Search class"):
-                # Start by adding each document
                 for doc in docs:
                     s.add_doc(doc)
                     doctype_cls.register_document(doc)
@@ -72,7 +71,7 @@ class SearchTest(unittest.TestCase):
                         self.assertEqual(doc[k], search_ix_doc[k])
 
             with self.subTest("Test get_local_map method of Search class"):
-                loc_map = s.get_local_map()
+                loc_map = s.get_local_map(doctype)
                 # Check type/size of resulting map
                 self.assertEqual(type(loc_map), type({}))
                 self.assertGreater(len(loc_map), 0)
@@ -102,6 +101,7 @@ class SearchTest(unittest.TestCase):
             with self.subTest("Test add_doc method of Search class"):
                 for doc in docs:
                     s.add_doc(doc)
+                    doctype_cls.register_document(doc)
 
             with self.subTest("Test update_docs method of Search class"):
                 # To update a document, we need to update the
@@ -112,17 +112,36 @@ class SearchTest(unittest.TestCase):
                 # and pass them to update_docs to update
                 # any documents that need updating.
 
-                # Modify the doc
+                # New dummy name of one of the documents
+                dummy_name = 'centillion-test-search-file-dingbat.dat'
+
+                # Doc id of document we will modify
+                doc_id = doctype_cls.document_registry[-1]['id']
+
+                # First, get the search index document and check it is the old version
+                search_ix_doc = s.get_by_id(doc_id)
+                self.assertNotEqual(search_ix_doc['name'], dummy_name)
+
+                time.sleep(1)
+
+                # Now pop the doc from the PlainDoctype registry, modify it, and put it back
                 doc = doctype_cls.document_registry.pop()
-                dummy_id = 'centillion-test-search-dummy-id'
-                doc['id'] = dummy_id
+                doc_id = doc['id']
+                doc['name'] = dummy_name
+                doc['modified_time'] = datetime.datetime.now().replace(microsecond=0) + datetime.timedelta(minutes=10)
                 doctype_cls.document_registry.append(doc)
 
                 # Now call the update_docs method of the Search class
-                to_update = {d['id'] for d in doctype_cls.document_registry}
+                to_update = {doc_id}
                 remote_map = doctype_cls.get_remote_map()
-                local_map = s.get_local_map()
+                local_map = s.get_local_map(doctype)
                 s.update_docs(to_update, remote_map, local_map, doctype_cls)
+
+                time.sleep(1)
+
+                # Get the search index document and ensure it was updated
+                search_ix_doc = s.get_by_id(doc_id)
+                self.assertEqual(search_ix_doc['name'], dummy_name)
 
     def test_crud_plain_doc(self):
         """
