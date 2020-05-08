@@ -361,7 +361,7 @@ class GithubIssuePRDoctype(GithubBaseDoctype):
         g = self.g
 
         # Return value: list of (last_modified_date, issue_pr_url) tuples
-        remote_map = {}
+        remote_map: typing.Dict[str, datetime.datetime] = {}
 
         # Iterate over each repo and store all keys + modified date
         repos_list = get_github_repos_list(name, g)

@@ -195,7 +195,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         drive = self.drive
 
         # Return value: map of gdrive_id to last_modified_date
-        remote_map = {}
+        remote_map: typing.Dict[str, datetime.datetime] = {}
 
         # To iterate over all files, use the list() function of drive
         nextPageToken = None  # This is the trick to get this to work
@@ -274,7 +274,6 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             ):
                 break
 
-        # Note: remote_map may be an empty list!
         return remote_map
 
     def get_by_id(self, doc_id):
