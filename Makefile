@@ -17,8 +17,9 @@ mypy:
 
 tests:=$(wildcard tests/test_*.py)
 
-test: $(tests)
+test: mypy lint
 	@echo $(tests)
+	pytest --cov=centillion -v tests
 
 # A pattern rule that runs a single test script
 $(tests): %.py : mypy lint
