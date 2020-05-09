@@ -1,5 +1,6 @@
 import os
 import unittest
+import logging
 
 from centillion.error import CentillionConfigException
 from centillion.config import Config, TMPDIR_NAME

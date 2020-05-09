@@ -1,4 +1,5 @@
 import os
+import logging
 import unittest
 
 from .context import TempCentillionConfig
