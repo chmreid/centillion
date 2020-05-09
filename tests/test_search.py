@@ -49,17 +49,40 @@ class SearchTest(unittest.TestCase):
         - get_by_id
         """
         doctype = "plain"
-        name = "centillion-test-search-add-doc"
-        doctype_instance = DoctypeRegistry.REGISTRY[doctype](name)
         docs = get_plain_docs()
 
-        with TempCentillionConfig(get_plain_config()):
-            s = Search()
+        with self.subTest("Test add_doc method of Search class"):
+            with TempCentillionConfig(get_plain_config()):
+                name = "centillion-test-search-add-doc"
+                s = Search()
 
-            with self.subTest("Test add_doc method of Search class"):
+                # Register each doc, then add it to the search index
                 for doc in docs:
+                    PlainDoctype.register_document(doc)
                     s.add_doc(doc)
-                    doctype_instance.register_document(doc)
+
+                # Ensure added
+                for doc in docs:
+                    search_ix_doc = s.get_by_id(doc['id'])
+                    self.assertEqual(search_ix_doc['name'], doc['name'])
+
+        with self.subTest("Test add_doc method of Search class"):
+            with TempCentillionConfig(get_plain_config()):
+                doctype_name = "centillion-test-search-add-docs"
+                s = Search()
+                doctype_instance = DoctypeRegistry.REGISTRY[doctype](doctype_name)
+
+                # Register each doc to create a remote list
+                for doc in docs:
+                    PlainDoctype.register_document(doc)
+                doc_ids = [d['id'] for d in docs]
+                s.add_docs(doc_ids, doctype_instance)
+
+                # Ensure added
+                for doc in docs:
+                    search_ix_doc = s.get_by_id(doc['id'])
+                    self.assertEqual(search_ix_doc['name'], doc['name'])
+
 
     def test_search_update_docs(self):
         """
