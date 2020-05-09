@@ -65,18 +65,6 @@ class Doctype(metaclass=DoctypeRegistry):
         cls._not_implemented("get_jinja_template")
 
     @classmethod
-    def get_common_schema(cls):
-        """Return a copy of the common schema shared by all document types"""
-        logger.debug("Fetching common schema")
-        return cls.common_schema.copy()
-
-    @classmethod
-    def get_schema(cls):
-        """Return a copy of this doctype's custom, non-common schema fields"""
-        logger.debug("Fetching class schema")
-        return cls.schema.copy()
-
-    @classmethod
     def get_doctype(cls):
         """Return the string label for this doctype"""
         logger.debug("Fetching class doctype")
