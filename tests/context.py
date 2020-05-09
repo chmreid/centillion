@@ -29,7 +29,7 @@ class TempCentillionConfig(object):
 
     By default, the centillion_root variable is set to a
     temporary directory that is created/destroyed with this
-    context manager. This can be overridden with the 
+    context manager. This can be overridden with the
     centillion_root argument:
 
         sample_config = { ... }

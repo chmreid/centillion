@@ -4,11 +4,9 @@ import unittest
 import datetime
 import tempfile
 from whoosh import fields
-from whoosh.fields import Schema
 
 from centillion.config import Config
 from centillion.search import Search
-from centillion.doctypes.doctype import Doctype
 from centillion.doctypes.registry import DoctypeRegistry
 from centillion.error import CentillionSearchIndexException
 
@@ -28,27 +26,29 @@ class SearchInitIndexTest(unittest.TestCase):
 
     def test_create_index(self):
         """
-        Test the creation of a search index 
+        Test the creation of a search index
         """
         doc = get_plain_docs(n=1)[0]
 
-        with self.subTest("Test that search index is created with centillion_root and without centillion_index"):
+        with self.subTest(
+            "Test that search index is created with centillion_root and without centillion_index"
+        ):
             with tempfile.TemporaryDirectory() as td:
                 config = get_plain_config()
-                config['centillion_root'] = td
+                config["centillion_root"] = td
                 with TempCentillionConfig(config, centillion_root=td):
                     # Populate the search index and verify it exists on disk
                     s = Search()
                     s.add_doc(doc)
-                    self.assertEqual(os.path.join(td, 'index'), Config.get_centillion_indexdir())
+                    self.assertEqual(os.path.join(td, "index"), Config.get_centillion_indexdir())
                     self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
 
         with self.subTest("Test that search index is created with centillion_index"):
             with tempfile.TemporaryDirectory() as td1:
-                with tempfile.TemporaryDirectory(prefix=td1+"/") as td2:
+                with tempfile.TemporaryDirectory(prefix=td1 + "/") as td2:
                     config = get_plain_config()
-                    config['centillion_root'] = td1
-                    config['centillion_index'] = td2
+                    config["centillion_root"] = td1
+                    config["centillion_index"] = td2
                     with TempCentillionConfig(config, centillion_root=td1):
                         # Populate search index and verify it exists on disk
                         s = Search()
@@ -57,11 +57,13 @@ class SearchInitIndexTest(unittest.TestCase):
                         self.assertEqual(td2, Config.get_centillion_indexdir())
                         self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
 
-        with self.subTest("Test that search index is created with centillion_index and centillion_root separated"):
+        with self.subTest(
+            "Test that search index is created with centillion_index and centillion_root separated"
+        ):
             with tempfile.TemporaryDirectory() as td1, tempfile.TemporaryDirectory() as td2:
                 config = get_plain_config()
-                config['centillion_root'] = td1
-                config['centillion_index'] = td2
+                config["centillion_root"] = td1
+                config["centillion_index"] = td2
                 with TempCentillionConfig(config):
                     s = Search()
                     s.add_doc(doc)
@@ -282,6 +284,7 @@ class SearchCrudTest(unittest.TestCase):
                 doc_id = doc["id"]
                 self.assertIn(doc_id, loc_map.keys())
 
+
 class SearchSchemaTest(unittest.TestCase):
     """
     Test methods of the Search class related to the schema
@@ -289,36 +292,38 @@ class SearchSchemaTest(unittest.TestCase):
 
     class MismatchedSchemas1(metaclass=DoctypeRegistry):
         """Barebones doctype class that defines a schema inconsistent with sister object"""
+
         doctype = "mismatched-1"
         schema = dict(
-            matched_field=fields.TEXT(stored=True),
-            mismatched_field=fields.TEXT(stored=True)
+            matched_field=fields.TEXT(stored=True), mismatched_field=fields.TEXT(stored=True)
         )
 
     class MismatchedSchemas2(metaclass=DoctypeRegistry):
         """Barebones doctype class that defines a schema inconsistent with sister object"""
+
         doctype = "mismatched-2"
         schema = dict(
-            matched_field=fields.TEXT(stored=True),
-            mismatched_field=fields.DATETIME(stored=True)
+            matched_field=fields.TEXT(stored=True), mismatched_field=fields.DATETIME(stored=True)
         )
 
     def test_constructor_mismatched(self):
         """Test the construction of a Search object"""
         temp_config = {
-            "doctypes": [{
-                "name": "centillion-test-search-constructor-mismatched-1",
-                "doctype": "mismatched-1"
-            },
-            {
-                "name": "centillion-test-search-constructor-mismatched-2",
-                "doctype": "mismatched-2"
-            }]
+            "doctypes": [
+                {
+                    "name": "centillion-test-search-constructor-mismatched-1",
+                    "doctype": "mismatched-1",
+                },
+                {
+                    "name": "centillion-test-search-constructor-mismatched-2",
+                    "doctype": "mismatched-2",
+                },
+            ]
         }
 
         with TempCentillionConfig(temp_config):
             with self.assertRaises(CentillionSearchIndexException):
-                s = Search()
+                Search()
 
 
 if __name__ == "__main__":
