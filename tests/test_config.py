@@ -7,6 +7,9 @@ from centillion.config import Config, TMPDIR_NAME
 from .context import TempCentillionConfig
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_config_multiple_doctypes():
     doctype_list = [
         "gdrive_docx",

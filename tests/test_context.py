@@ -4,6 +4,9 @@ import unittest
 from .context import TempCentillionConfig
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_simple_config():
     return {
         "doctypes": [],

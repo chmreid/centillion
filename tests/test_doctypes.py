@@ -24,9 +24,15 @@ class DoctypeRegistryTest(unittest.TestCase):
     class _TestDoctypeSubclassC(metaclass=DoctypeRegistry):
         doctype = DOCTYPES[2]
 
+    class _TestDoctypeSubclassD(metaclass=DoctypeRegistry):
+        pass
+
     def test_registry(self):
         for doctype in DOCTYPES:
             self.assertIn(doctype, DoctypeRegistry.get_registry())
+
+    def test_registry_noattr(self):
+        self.assertIn(_TestDoctypeSubclassD.__name__, DoctypeRegistry.get_registry())
 
 
 class DoctypeTest(unittest.TestCase):
