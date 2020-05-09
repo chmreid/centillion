@@ -1,10 +1,12 @@
+import os
 import logging
 import unittest
 import datetime
+import tempfile
 from whoosh import fields
 from whoosh.fields import Schema
 
-# from centillion.config import Config
+from centillion.config import Config
 from centillion.search import Search
 from centillion.doctypes.doctype import Doctype
 from centillion.doctypes.registry import DoctypeRegistry
@@ -17,6 +19,55 @@ from .util_searchdocs import get_plain_docs
 
 
 logger = logging.getLogger(__name__)
+
+
+class SearchInitIndexTest(unittest.TestCase):
+    """
+    Test methods that initialize the Search class by creating or opening a search index.
+    """
+
+    def test_create_index(self):
+        """
+        Test the creation of a search index 
+        """
+        doc = get_plain_docs(n=1)[0]
+
+        with self.subTest("Test that search index is created with centillion_root and without centillion_index"):
+            with tempfile.TemporaryDirectory() as td:
+                config = get_plain_config()
+                config['centillion_root'] = td
+                with TempCentillionConfig(config, centillion_root=td):
+                    # Populate the search index and verify it exists on disk
+                    s = Search()
+                    s.add_doc(doc)
+                    self.assertEqual(os.path.join(td, 'index'), Config.get_centillion_indexdir())
+                    self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
+
+        with self.subTest("Test that search index is created with centillion_index"):
+            with tempfile.TemporaryDirectory() as td1:
+                with tempfile.TemporaryDirectory(prefix=td1+"/") as td2:
+                    config = get_plain_config()
+                    config['centillion_root'] = td1
+                    config['centillion_index'] = td2
+                    with TempCentillionConfig(config, centillion_root=td1):
+                        # Populate search index and verify it exists on disk
+                        s = Search()
+                        s.add_doc(doc)
+                        self.assertEqual(td1, Config.get_centillion_root())
+                        self.assertEqual(td2, Config.get_centillion_indexdir())
+                        self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
+
+        with self.subTest("Test that search index is created with centillion_index and centillion_root separated"):
+            with tempfile.TemporaryDirectory() as td1, tempfile.TemporaryDirectory() as td2:
+                config = get_plain_config()
+                config['centillion_root'] = td1
+                config['centillion_index'] = td2
+                with TempCentillionConfig(config):
+                    s = Search()
+                    s.add_doc(doc)
+                    self.assertEqual(td1, Config.get_centillion_root())
+                    self.assertEqual(td2, Config.get_centillion_indexdir())
+                    self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
 
 
 class SearchCrudTest(unittest.TestCase):

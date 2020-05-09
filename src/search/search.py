@@ -37,6 +37,30 @@ class Search(object):
         self.get_schema()
         self.open_index()
 
+    def open_index(self):
+        """Open an index, creating it if necessary"""
+        indexdir = Config.get_centillion_indexdir()
+
+        # Create or open index
+        if index.exists_in(indexdir):
+            self._open_index()
+        else:
+            self._create_index()
+
+    def _open_index(self):
+        """Open an existing index"""
+        indexdir = Config.get_centillion_indexdir()
+        self.ix = index.open_dir(indexdir)
+        if self.schema != self.ix.schema:
+            err = f"Error: schema mismatch! Specified schema from config file does not "
+            err += f"match schema of existing search index."
+            raise CentillionSearchIndexException(err)
+
+    def _create_index(self):
+        """Create a new index"""
+        indexdir = Config.get_centillion_indexdir()
+        self.ix = index.create_in(indexdir, self.schema)
+
     @lru_cache(maxsize=32)
     def get_schema(self):
         # This dictionary will be converted to a Schema object
@@ -66,30 +90,6 @@ class Search(object):
 
         self.schema = Schema(**_schema)
         return self.schema
-
-    def open_index(self):
-        """Open an index, creating it if necessary"""
-        indexdir = Config.get_centillion_indexdir()
-
-        # Create or open index
-        if index.exists_in(indexdir):
-            self._open_index()
-        else:
-            self._create_index()
-
-    def _open_index(self):
-        """Open an existing index"""
-        indexdir = Config.get_centillion_indexdir()
-        self.ix = index.open_dir(indexdir)
-        if self.schema != self.ix.schema:
-            err = f"Error: schema mismatch! Specified schema from config file does not "
-            err += f"match schema of existing search index."
-            raise CentillionSearchIndexException(err)
-
-    def _create_index(self):
-        """Create a new index"""
-        indexdir = Config.get_centillion_indexdir()
-        self.ix = index.create_in(indexdir, self.schema)
 
     def sync_documents(
         self,
