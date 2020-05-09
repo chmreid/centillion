@@ -143,9 +143,9 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         """
         # Turn the whoosh_search_result into something that works with Jinja template below
         result = SearchResult()
-        for common_key in cls.get_common_schema():
+        for common_key in cls.common_schema:
             result[common_key] = whoosh_search_result.getattr(common_key)
-        for gh_key in cls.get_schema():
+        for gh_key in cls.schema:
             result[gh_key] = whoosh_search_result.getattr(gh_key)
 
         # Parse and process datetimes into strings
