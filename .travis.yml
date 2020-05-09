@@ -48,3 +48,5 @@ jobs:
   - stage: integration_test
     env:
     - MAKE_ARGS="integration_test"
+    after_success:
+    - bash <(curl -s https://codecov.io/bash)
