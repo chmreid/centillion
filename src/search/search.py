@@ -43,14 +43,13 @@ class Search(object):
         _schema = {}
 
         # Get the common schema
-        common_schema = Doctype.get_common_schema()
-        _schema.update(common_schema)
+        _schema.update(Doctype.common_schema)
 
         # Get the doctype schemas
         doctypes_list = Config.get_doctypes()
         for doctype in doctypes_list:
             this_doctype_cls = Doctype.REGISTRY[doctype]
-            this_doctype_schema = this_doctype_cls.get_schema()
+            this_doctype_schema = this_doctype_cls.schema
             # For each schema field, check it does not conflict with our schema, then add it
             for schema_field in this_doctype_schema:
                 if schema_field in _schema:
