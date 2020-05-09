@@ -1,6 +1,5 @@
 import unittest
 import datetime
-from unittest import mock
 from whoosh.fields import Schema
 
 # from centillion.config import Config
@@ -10,14 +9,8 @@ from centillion.doctypes.registry import DoctypeRegistry
 
 from .context import TempCentillionConfig
 from .doctypes.plain import PlainDoctype
-from .util_configs import (
-    get_plain_config,
-    get_invalid_ghfile_config,
-)
-from .util_searchdocs import (
-    get_plain_docs,
-    get_ghfile_doc
-)
+from .util_configs import get_plain_config
+from .util_searchdocs import get_plain_docs
 
 
 class SearchTest(unittest.TestCase):
@@ -48,12 +41,10 @@ class SearchTest(unittest.TestCase):
         - get_local_map
         - get_by_id
         """
-        doctype = "plain"
         docs = get_plain_docs()
 
         with self.subTest("Test add_doc method of Search class"):
             with TempCentillionConfig(get_plain_config()):
-                name = "centillion-test-search-add-doc"
                 s = Search()
 
                 # Register each doc, then add it to the search index
@@ -68,9 +59,10 @@ class SearchTest(unittest.TestCase):
 
         with self.subTest("Test add_doc method of Search class"):
             with TempCentillionConfig(get_plain_config()):
-                doctype_name = "centillion-test-search-add-docs"
                 s = Search()
-                doctype_instance = DoctypeRegistry.REGISTRY[doctype](doctype_name)
+
+                doctype_name = "centillion-test-search-add-docs"
+                doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](doctype_name)
 
                 # Register each doc to create a remote list
                 for doc in docs:
@@ -83,7 +75,6 @@ class SearchTest(unittest.TestCase):
                     search_ix_doc = s.get_by_id(doc['id'])
                     self.assertEqual(search_ix_doc['name'], doc['name'])
 
-
     def test_search_update_docs(self):
         """
         Test the ability to add, then update, a plain document
@@ -92,9 +83,8 @@ class SearchTest(unittest.TestCase):
         - add_doc
         - update_docs
         """
-        doctype = "plain"
         name = "centillion-test-search-add-doc"
-        doctype_instance = DoctypeRegistry.REGISTRY[doctype](name)
+        doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](name)
         docs = get_plain_docs()
 
         with TempCentillionConfig(get_plain_config()):
@@ -149,9 +139,6 @@ class SearchTest(unittest.TestCase):
         - add_doc
         - delete_docs
         """
-        doctype = "plain"
-        name = "centillion-test-search-add-doc"
-        doctype_instance = DoctypeRegistry.REGISTRY[doctype](name)
         docs = get_plain_docs()
         doc_ids_list = [d['id'] for d in docs]
         doc_ids_set = {d['id'] for d in docs}
@@ -212,9 +199,8 @@ class SearchTest(unittest.TestCase):
         """
         Test the get_by_id method of the Search class.
         """
-        doctype = "plain"
         name = "centillion-test-search-get-by-id"
-        doctype_instance = DoctypeRegistry.REGISTRY[doctype](name)
+        doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](name)
         docs = get_plain_docs()
 
         with TempCentillionConfig(get_plain_config()):
@@ -238,9 +224,8 @@ class SearchTest(unittest.TestCase):
         """
         Test the get_local_map method of the Search class.
         """
-        doctype = "plain"
         name = "centillion-test-search-local-map"
-        doctype_instance = DoctypeRegistry.REGISTRY[doctype](name)
+        doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](name)
         docs = get_plain_docs()
 
         with TempCentillionConfig(get_plain_config()):
@@ -250,7 +235,7 @@ class SearchTest(unittest.TestCase):
                 s.add_doc(doc)
                 doctype_instance.register_document(doc)
 
-            loc_map = s.get_local_map(doctype)
+            loc_map = s.get_local_map(PlainDoctype.doctype)
             # Check type/size of resulting map
             self.assertEqual(type(loc_map), type({}))
             self.assertGreater(len(loc_map), 0)

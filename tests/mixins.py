@@ -1,7 +1,12 @@
+import os
+import shutil
 import typing
 import itertools
 import unittest
 import datetime
+
+from . import temp_dir as centillion_temp_dir
+from .decorators import is_integration
 
 from centillion.doctypes.doctype import Doctype
 
@@ -121,3 +126,24 @@ class SchemaTestMixin(unittest.TestCase):
                     this_type = type(doctype_schema[shared_key])
                     other_type = type(other_doctype_schema[shared_key])
                     self.assertEqual(this_type, other_type)
+
+
+class IntegrationTestMixin(unittest.TestCase):
+    """
+    Adds a setUp and tearDown method for this unit test class
+    that will ensure /tmp/centillion is available during the test
+    and is deleted after the test is finished.
+    """
+    @classmethod
+    def setUp(self):
+        if is_integration():
+            if not os.path.exists(centillion_temp_dir):
+                os.makedirs(centillion_temp_dir)
+
+    @classmethod
+    def tearDown(self):
+        if is_integration():
+            if os.path.exists(centillion_temp_dir):
+                shutil.rmtree(centillion_temp_dir)
+            else:
+                raise Exception(f"Error: temporary directory {centillion_temp_dir} disappeared during a test")

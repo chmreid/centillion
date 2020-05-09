@@ -32,14 +32,6 @@ def get_config_multiple_doctypes():
 
 class ConfigTest(unittest.TestCase):
 
-    @classmethod
-    def setUp(self):
-        pass
-
-    @classmethod
-    def tearDown(self):
-        pass
-
     def test_config_class_construction(self):
         """
         Test the constructors of the Config class

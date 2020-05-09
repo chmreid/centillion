@@ -1,8 +1,11 @@
 import unittest
+import logging
 
 from centillion.doctypes.registry import DoctypeRegistry
 from centillion.doctypes.doctype import Doctype
 
+
+logger = logging.getLogger(__name__)
 
 DOCTYPES = ["subclass_a", "subclass_b", "subclass_c"]
 

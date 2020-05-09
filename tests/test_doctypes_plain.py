@@ -1,5 +1,6 @@
 import unittest
 import datetime
+import logging
 
 # from centillion.config import Config
 # from centillion.doctypes.registry import DoctypeRegistry
@@ -9,6 +10,9 @@ from .doctypes.plain import PlainDoctype
 from .context import TempCentillionConfig
 from .util_searchdocs import get_plain_docs
 from .util_configs import get_plain_config
+
+
+logger = logging.getLogger(__name__)
 
 
 class PlainDoctypeTest(unittest.TestCase):
