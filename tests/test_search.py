@@ -1,11 +1,14 @@
+import logging
 import unittest
 import datetime
+from whoosh import fields
 from whoosh.fields import Schema
 
 # from centillion.config import Config
 from centillion.search import Search
 from centillion.doctypes.doctype import Doctype
 from centillion.doctypes.registry import DoctypeRegistry
+from centillion.error import CentillionSearchIndexException
 
 from .context import TempCentillionConfig
 from .doctypes.plain import PlainDoctype
@@ -13,23 +16,18 @@ from .util_configs import get_plain_config
 from .util_searchdocs import get_plain_docs
 
 
-class SearchTest(unittest.TestCase):
+logger = logging.getLogger(__name__)
+
+
+class SearchCrudTest(unittest.TestCase):
     """
-    Check the Search class works as intended
+    Test methods of the Search class that perform CRUD operations on the search index.
     """
 
     def test_constructor(self):
         """Test the construction of a Search object"""
         with TempCentillionConfig(get_plain_config()):
-            # We did not specify any doctypes, so the schema
-            # should match the common schema exactly.
-            s = Search()
-            # Returns the schema stored in the search index
-            search_schema = s.get_schema()
-            # Returns the schema common to all doctypes (common schema)
-            common_schema = Schema(**Doctype.get_common_schema())
-            # These should be equal, since get_plain_config() does not specify any doctypes
-            self.assertEqual(common_schema, search_schema)
+            Search()
 
     def test_search_add_docs(self):
         """
@@ -38,8 +36,6 @@ class SearchTest(unittest.TestCase):
         This method tests these Search class methods:
         - add_doc
         - add_docs
-        - get_local_map
-        - get_by_id
         """
         docs = get_plain_docs()
 
@@ -47,33 +43,31 @@ class SearchTest(unittest.TestCase):
             with TempCentillionConfig(get_plain_config()):
                 s = Search()
 
-                # Register each doc, then add it to the search index
+                # Call add_doc on each doc (passes doc directly)
                 for doc in docs:
                     PlainDoctype.register_document(doc)
                     s.add_doc(doc)
 
                 # Ensure added
                 for doc in docs:
-                    search_ix_doc = s.get_by_id(doc['id'])
-                    self.assertEqual(search_ix_doc['name'], doc['name'])
+                    search_ix_doc = s.get_by_id(doc["id"])
+                    self.assertEqual(search_ix_doc["name"], doc["name"])
 
         with self.subTest("Test add_doc method of Search class"):
             with TempCentillionConfig(get_plain_config()):
                 s = Search()
 
-                doctype_name = "centillion-test-search-add-docs"
-                doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](doctype_name)
-
-                # Register each doc to create a remote list
+                # Call add_docs on all doc ids (uses docs from doctype get by id)
                 for doc in docs:
                     PlainDoctype.register_document(doc)
-                doc_ids = [d['id'] for d in docs]
-                s.add_docs(doc_ids, doctype_instance)
+                doc_ids = [d["id"] for d in docs]
+                s.add_docs(doc_ids, PlainDoctype(""))
 
                 # Ensure added
                 for doc in docs:
-                    search_ix_doc = s.get_by_id(doc['id'])
-                    self.assertEqual(search_ix_doc['name'], doc['name'])
+                    search_ix_doc = s.get_by_id(doc["id"])
+                    # TODO improve
+                    self.assertEqual(search_ix_doc["name"], doc["name"])
 
     def test_search_update_docs(self):
         """
@@ -83,8 +77,6 @@ class SearchTest(unittest.TestCase):
         - add_doc
         - update_docs
         """
-        name = "centillion-test-search-add-doc"
-        doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](name)
         docs = get_plain_docs()
 
         with TempCentillionConfig(get_plain_config()):
@@ -92,32 +84,27 @@ class SearchTest(unittest.TestCase):
 
             # Add docs (already tested)
             for doc in docs:
-                s.add_doc(doc)
                 PlainDoctype.register_document(doc)
+                s.add_doc(doc)
 
-            # To update a document, we need to update the
-            # document in the "remote", which in this case
-            # is the PlainDoctype class's document_registry variable.
-            #
-            # Then we get the local and remote lists,
-            # and pass them to update_docs to update
-            # any documents that need updating.
+            # Update the document in the remote (modify the doc and re-register it)
 
-            # New dummy name for one of the documents
-            dummy_name = 'centillion-test-search-file-dingbat.dat'
+            # Change a file name to this
+            new_name = "centillion-test-search-file-dingbat.dat"
 
             # Doc id of document we will modify
-            doc_id = docs[0]['id']
+            doc_id = docs[0]["id"]
 
-            # First, get the search index document and check it is the old version
-            # Adding the document above ensures the document will be in the search index.
+            # Check that the document we're about to update doesn't have the new name
             search_ix_doc = s.get_by_id(doc_id)
-            self.assertNotEqual(search_ix_doc['name'], dummy_name)
+            self.assertNotEqual(search_ix_doc["name"], new_name)
 
             # Modify the document in the "remote" (the PlainDoctype class)
             doc = PlainDoctype.document_registry[doc_id]
-            doc['name'] = dummy_name
-            doc['modified_time'] = datetime.datetime.now().replace(microsecond=0) + datetime.timedelta(minutes=10)
+            doc["name"] = new_name
+            doc["modified_time"] = datetime.datetime.now().replace(
+                microsecond=0
+            ) + datetime.timedelta(minutes=10)
 
             # Re-register the updated document
             PlainDoctype.register_document(doc)
@@ -125,11 +112,11 @@ class SearchTest(unittest.TestCase):
             # Call the update_docs method of the Search class to update the document in the search index
             to_update = {doc_id}
             remote_map = PlainDoctype.get_remote_map()
-            s.update_docs(to_update, doctype_instance, remote_map)
+            s.update_docs(to_update, PlainDoctype(""), remote_map)
 
             # Get the search index document and ensure it was updated
             search_ix_doc = s.get_by_id(doc_id)
-            self.assertEqual(search_ix_doc['name'], dummy_name)
+            self.assertEqual(search_ix_doc["name"], new_name)
 
     def test_search_delete_docs(self):
         """
@@ -140,8 +127,8 @@ class SearchTest(unittest.TestCase):
         - delete_docs
         """
         docs = get_plain_docs()
-        doc_ids_list = [d['id'] for d in docs]
-        doc_ids_set = {d['id'] for d in docs}
+        doc_ids_list = [d["id"] for d in docs]
+        doc_ids_set = {d["id"] for d in docs}
 
         with TempCentillionConfig(get_plain_config()):
             s = Search()
@@ -199,20 +186,18 @@ class SearchTest(unittest.TestCase):
         """
         Test the get_by_id method of the Search class.
         """
-        name = "centillion-test-search-get-by-id"
-        doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](name)
-        docs = get_plain_docs()
-
         with TempCentillionConfig(get_plain_config()):
             s = Search()
 
+            # Add each doc to search index, and register it with PlainDoctype
+            docs = get_plain_docs()
             for doc in docs:
                 s.add_doc(doc)
-                doctype_instance.register_document(doc)
+                PlainDoctype.register_document(doc)
 
             # Access each document using get_by_id
             for doc in docs:
-                doc_id = doc['id']
+                doc_id = doc["id"]
                 search_ix_doc = s.get_by_id(doc_id)
                 # Check the search index is not just returning the id field
                 self.assertTrue(len(search_ix_doc.keys()) > 1)
@@ -224,8 +209,6 @@ class SearchTest(unittest.TestCase):
         """
         Test the get_local_map method of the Search class.
         """
-        name = "centillion-test-search-local-map"
-        doctype_instance = DoctypeRegistry.REGISTRY[PlainDoctype.doctype](name)
         docs = get_plain_docs()
 
         with TempCentillionConfig(get_plain_config()):
@@ -233,7 +216,7 @@ class SearchTest(unittest.TestCase):
 
             for doc in docs:
                 s.add_doc(doc)
-                doctype_instance.register_document(doc)
+                PlainDoctype.register_document(doc)
 
             loc_map = s.get_local_map(PlainDoctype.doctype)
             # Check type/size of resulting map
@@ -245,8 +228,46 @@ class SearchTest(unittest.TestCase):
                 self.assertEqual(type(v), datetime.datetime)
             # Check that each document added to the search index is in the local_map
             for doc in docs:
-                doc_id = doc['id']
+                doc_id = doc["id"]
                 self.assertIn(doc_id, loc_map.keys())
+
+class SearchSchemaTest(unittest.TestCase):
+    """
+    Test methods of the Search class related to the schema
+    """
+
+    class MismatchedSchemas1(metaclass=DoctypeRegistry):
+        """Barebones doctype class that defines a schema inconsistent with sister object"""
+        doctype = "mismatched-1"
+        schema = dict(
+            matched_field=fields.TEXT(stored=True),
+            mismatched_field=fields.TEXT(stored=True)
+        )
+
+    class MismatchedSchemas2(metaclass=DoctypeRegistry):
+        """Barebones doctype class that defines a schema inconsistent with sister object"""
+        doctype = "mismatched-2"
+        schema = dict(
+            matched_field=fields.TEXT(stored=True),
+            mismatched_field=fields.DATETIME(stored=True)
+        )
+
+    def test_constructor_mismatched(self):
+        """Test the construction of a Search object"""
+        temp_config = {
+            "doctypes": [{
+                "name": "centillion-test-search-constructor-mismatched-1",
+                "doctype": "mismatched-1"
+            },
+            {
+                "name": "centillion-test-search-constructor-mismatched-2",
+                "doctype": "mismatched-2"
+            }]
+        }
+
+        with TempCentillionConfig(temp_config):
+            with self.assertRaises(CentillionSearchIndexException):
+                s = Search()
 
 
 if __name__ == "__main__":
