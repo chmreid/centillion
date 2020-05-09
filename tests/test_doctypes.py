@@ -32,7 +32,7 @@ class DoctypeRegistryTest(unittest.TestCase):
             self.assertIn(doctype, DoctypeRegistry.get_registry())
 
     def test_registry_noattr(self):
-        self.assertIn(_TestDoctypeSubclassD.__name__, DoctypeRegistry.get_registry())
+        self.assertIn(self._TestDoctypeSubclassD.__name__, DoctypeRegistry.get_registry())
 
 
 class DoctypeTest(unittest.TestCase):
@@ -61,11 +61,11 @@ class DoctypeTest(unittest.TestCase):
             "indexed_time",
             "name",
         ]
-        schema_keys = list(Doctype.get_common_schema().keys())
+        schema_keys = list(Doctype.common_schema.keys())
         for req_key in required_keys:
             self.assertIn(req_key, schema_keys)
         # Ensure base schema is empty
-        self.assertDictEqual(Doctype.get_schema(), {})
+        self.assertDictEqual(Doctype.schema, {})
 
     def test_doctype(self):
         """Test the doctype class var is configured and accessible"""
