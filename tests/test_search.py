@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import unittest
 import datetime
@@ -87,10 +88,15 @@ class SearchInitIndexTest(unittest.TestCase):
             self.assertEqual(os.path.join(td.name, "index"), Config.get_centillion_indexdir())
             self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
 
-        # Open the existing search index
-        with TempCentillionConfig(config):
-            s2 = Search()
-            self.assertNotEqual(s2.get_by_id(doc_id), None)
+        with self.subTest("Open an existing search index on disk"):
+            # Open the existing search index
+            with TempCentillionConfig(config):
+                s2 = Search()
+                self.assertNotEqual(s2.get_by_id(doc_id), None)
+
+        # Now add a new, inconsistent doctype to the config file
+        with self.subTest("Open an existing search index with modified doctype configuration"):
+            pass
 
         td.cleanup()
 
@@ -155,6 +161,23 @@ class SearchCrudTest(unittest.TestCase):
         """
         docs = get_plain_docs()
 
+        def _rename_doc_in_remote(doc_id, new_name):
+            # Utility function to rename a document in the PlainDoctype "remote" (a dict in memory)
+
+            # Check that the document we're about to update doesn't have the new name
+            search_ix_doc = s.get_by_id(doc_id)
+            self.assertNotEqual(search_ix_doc["name"], new_name)
+
+            # Modify the document in the "remote" (the PlainDoctype class)
+            doc = PlainDoctype.document_registry[doc_id]
+            doc["name"] = new_name
+            doc["modified_time"] = datetime.datetime.now().replace(
+                microsecond=0
+            ) + datetime.timedelta(minutes=10)
+
+            # Re-register the updated document
+            PlainDoctype.register_document(doc)
+
         with TempCentillionConfig(get_plain_config()):
             s = Search()
 
@@ -162,45 +185,35 @@ class SearchCrudTest(unittest.TestCase):
             for doc in docs:
                 PlainDoctype.register_document(doc)
                 s.add_doc(doc)
-
-            def _rename_doc_in_remote(doc_id, new_name):
-
-                # Check that the document we're about to update doesn't have the new name
-                search_ix_doc = s.get_by_id(doc_id)
-                self.assertNotEqual(search_ix_doc["name"], new_name)
-
-                # Modify the document in the "remote" (the PlainDoctype class)
-                doc = PlainDoctype.document_registry[doc_id]
-                doc["name"] = new_name
-                doc["modified_time"] = datetime.datetime.now().replace(
-                    microsecond=0
-                ) + datetime.timedelta(minutes=10)
-
-                # Re-register the updated document
-                PlainDoctype.register_document(doc)
-
             doc_id = docs[0]["id"]
             to_update = {doc_id}
 
-            # Update/rename doc in remote
-            new_name = 'centillion-test-search-file-dingbat.dat'
-            _rename_doc_in_remote(doc_id, new_name)
+            with self.subTest("Testing update_docs with remote_map argument"):
+                # Update/rename doc in remote
+                new_name = 'centillion-test-search-file-dingbat.dat'
+                _rename_doc_in_remote(doc_id, new_name)
 
-            # Update local search index passing remote_map
-            remote_map = PlainDoctype.get_remote_map()
-            s.update_docs(to_update, PlainDoctype(""), remote_map)
+                # Update local search index passing remote_map
+                remote_map = PlainDoctype.get_remote_map()
+                s.update_docs(to_update, PlainDoctype(""), remote_map)
 
-            # Get the search index document and ensure it was updated
-            search_ix_doc = s.get_by_id(doc_id)
-            self.assertEqual(search_ix_doc["name"], new_name)
+                # Get the search index document and ensure it was updated
+                search_ix_doc = s.get_by_id(doc_id)
+                self.assertEqual(search_ix_doc["name"], new_name)
 
-            # Update doc in remote
-            new_name2 = 'centillion-test-search-file-dingbat-2.dat'
-            _rename_doc_in_remote(doc_id, new_name2)
+            time.sleep(1)
 
-            # Update local search index without remote_map
-            remote_map2 = PlainDoctype.get_remote_map()
-            s.update_docs(to_update, PlainDoctype(""), remote_map2)
+            with self.subTest("Testing update_docs without remote_map argument"):
+                # Update/rename doc in remote
+                new_name2 = 'centillion-test-search-file-dingbat-2.dat'
+                _rename_doc_in_remote(doc_id, new_name2)
+
+                # Update local search index without remote_map
+                s.update_docs(to_update, PlainDoctype(""))
+
+                # Get the search index document and ensure it was updated
+                search_ix_doc2 = s.get_by_id(doc_id)
+                self.assertEqual(search_ix_doc2["name"], new_name2)
 
     def test_search_delete_docs(self):
         """
