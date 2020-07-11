@@ -1,9 +1,6 @@
 import os
-import shutil
-# import json
-# import tempfile
-# import subprocess
 import unittest
+import logging
 
 from centillion.error import CentillionConfigException
 from centillion.config import Config, TMPDIR_NAME
@@ -11,10 +8,13 @@ from centillion.config import Config, TMPDIR_NAME
 from .context import TempCentillionConfig
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_config_multiple_doctypes():
     doctype_list = [
-        "gdrive_docx", 
-        "gdrive_file", 
+        "gdrive_docx",
+        "gdrive_file",
         "github_issues_prs",
     ]
     doctype_list.sort()
@@ -35,14 +35,6 @@ def get_config_multiple_doctypes():
 
 
 class ConfigTest(unittest.TestCase):
-
-    @classmethod
-    def setUp(self):
-        pass
-
-    @classmethod
-    def tearDown(self):
-        pass
 
     def test_config_class_construction(self):
         """
@@ -111,22 +103,23 @@ class ConfigTest(unittest.TestCase):
 
     def test_config_class_env_vars(self):
         """
-        Check the ability to access environment variables in the config file
+        Check the ability to access environment variables in the Config class
         """
         temp_config = dict()
         with TempCentillionConfig(temp_config):
-            os.environ["FOO"] = "BAR"
-            self.assertEqual(Config.get_required_env_var("FOO"), "BAR")
-            del os.environ["FOO"]
+            var = "CENTILLION_TEST_FOO"
+            os.environ[var] = "BAR"
+            self.assertEqual(Config.get_required_env_var(var), "BAR")
+            del os.environ[var]
             with self.assertRaises(CentillionConfigException):
-                Config.get_required_env_var("FOO")
+                Config.get_required_env_var(var)
 
     def test_config_class_get_doctypes(self):
         """
         Check the ability to get a list of active doctypes in the config file
         """
-        doctypes, temp_config = get_config_multiple_doctypes() 
-        with TempCentillionConfig(temp_config) as temp_config_file:
+        doctypes, temp_config = get_config_multiple_doctypes()
+        with TempCentillionConfig(temp_config):
             config_doctypes = Config.get_doctypes()
             self.assertEqual(doctypes, config_doctypes)
 
@@ -135,7 +128,7 @@ class ConfigTest(unittest.TestCase):
         Check the abiltiy to get the configuration section for a particular doctype
         """
         doctypes, temp_config = get_config_multiple_doctypes()
-        with TempCentillionConfig(temp_config) as temp_config_file:
+        with TempCentillionConfig(temp_config):
             for doctype_config_entry in temp_config['doctypes']:
                 name = doctype_config_entry['name']
                 doctype_config = Config.get_doctype_config(name)

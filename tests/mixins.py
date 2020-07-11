@@ -1,7 +1,12 @@
+import os
+import shutil
 import typing
 import itertools
 import unittest
 import datetime
+
+from . import temp_dir as centillion_temp_dir
+from .decorators import is_integration
 
 from centillion.doctypes.doctype import Doctype
 
@@ -10,17 +15,16 @@ class DoctypeTestMixin(unittest.TestCase):
     """
     Adds a check for given doctypes in a given config file.
 
-    This constructs an instance of each doctype and calls _action() with it.
+    This class provides one main method, _iterate_doctypes.
+    This method constructs an instance of each doctype class,
+    and calls an action on it.
     """
-
-    def _action(self, doctype):
-        """Perform an action with a doctype instance"""
-        raise NotImplementedError("Error: _action() not implemented for DoctypeTestMixin")
 
     def _iterate_doctypes(
         self,
         doctypes_to_check: typing.List[str],
         doctypes_names_map: typing.Dict[str, typing.List[str]],
+        action
     ):
         """
         Given a list of doctypes to check, and a map of doctypes to credential names,
@@ -30,13 +34,13 @@ class DoctypeTestMixin(unittest.TestCase):
 
         :param doctypes_to_check: list of strings of doctypes to check
         :param doctypes_names_map: map of doctypes to list of names of credentials matching that doctype
+        :param action: function to perform on each doctype instance after constructing it
         """
         for doctype in doctypes_to_check:
             self.assertIn(doctype, doctypes_names_map)
             names = doctypes_names_map[doctype]
             name = names[0]
-            msg = f"Check doctype constructor for {doctype} using credentials {name}"
-            with self.subTest(msg):
+            with self.subTest(f"Check doctype constructor for {doctype} using credentials {name}"):
 
                 # Doctype gives name, name is passed to constructor.
                 # Doctype gives class ref via registry.
@@ -45,7 +49,7 @@ class DoctypeTestMixin(unittest.TestCase):
 
                 # Make the doctype class (also performs credentials validation).
                 doctype = DoctypeCls(name)
-                self._action(doctype)
+                action(doctype)
 
 
 class ConstructorTestMixin(DoctypeTestMixin):
@@ -53,20 +57,20 @@ class ConstructorTestMixin(DoctypeTestMixin):
     Adds a check for constructors of a given doctype in a given config file.
     """
 
-    def _action(self, doctype):
-        """Let _iterate_doctypes() do all the work of calling the constructors"""
-        pass
-
     def check_doctype_constructors(self, *args, **kwargs):
         """
         Iterate over each doctype in doctypes_to_check, assemble an instance of each class.
-        Then call _action() on each one (to test constructor, do nothing).
+        Then call action on each one (to test constructor, do nothing).
 
         :param doctypes_to_check: list of strings of doctypes to check
         :param doctypes_names_map: map of doctypes to list of names of credentials matching that doctype
         """
+        def _action(doctype):
+            """Let _iterate_doctypes() do all the work of calling constructors"""
+            pass
+
         # Calls _action() on each doctype class
-        self._iterate_doctypes(*args, **kwargs)
+        self._iterate_doctypes(*args, **kwargs, action=_action)
 
 
 class RemoteListTestMixin(DoctypeTestMixin):
@@ -74,15 +78,7 @@ class RemoteListTestMixin(DoctypeTestMixin):
     Adds a check for the remote_list function of a given doctype in a given config file.
     """
 
-    def _action(self, doctype):
-        """Once _iterate_doctypes() calls the constructors, we call remote_list()"""
-        doctype.remote_list()
-        # Verify doctype list consists of (datetime, type) tuples
-        for date, name in doctype.remote_list():
-            self.assertEqual(type(date), datetime.datetime)
-            self.assertEqual(type(name), type(""))
-
-    def check_doctype_remote_list(self, *args, **kwargs):
+    def check_doctype_remote_map(self, *args, **kwargs):
         """
         Given a map of doctypes to credential names, get the type of each name
         and call the constructor of that class. Requires real credentials.
@@ -90,7 +86,14 @@ class RemoteListTestMixin(DoctypeTestMixin):
         :param doctypes_to_check: list of strings of doctypes to check
         :param doctypes_names_map: map of doctypes to list of names of credentials matching that doctype
         """
-        self._iterate_doctypes(*args, **kwargs)
+        def _action(doctype):
+            remote_map = doctype.get_remote_map()
+            # Verify remote map is a map of strings to dates
+            for name, date in remote_map.items():
+                self.assertEqual(type(name), str)
+                self.assertEqual(type(date), datetime.datetime)
+
+        self._iterate_doctypes(*args, **kwargs, action=_action)
 
 
 class SchemaTestMixin(unittest.TestCase):
@@ -123,3 +126,24 @@ class SchemaTestMixin(unittest.TestCase):
                     this_type = type(doctype_schema[shared_key])
                     other_type = type(other_doctype_schema[shared_key])
                     self.assertEqual(this_type, other_type)
+
+
+class IntegrationTestMixin(unittest.TestCase):
+    """
+    Adds a setUp and tearDown method for this unit test class
+    that will ensure /tmp/centillion is available during the test
+    and is deleted after the test is finished.
+    """
+    @classmethod
+    def setUp(self):
+        if is_integration():
+            if not os.path.exists(centillion_temp_dir):
+                os.makedirs(centillion_temp_dir)
+
+    @classmethod
+    def tearDown(self):
+        if is_integration():
+            if os.path.exists(centillion_temp_dir):
+                shutil.rmtree(centillion_temp_dir)
+            else:
+                raise Exception(f"Error: temporary directory {centillion_temp_dir} disappeared during a test")

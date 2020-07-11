@@ -1,8 +1,11 @@
 import unittest
+import logging
 
 from centillion.doctypes.registry import DoctypeRegistry
 from centillion.doctypes.doctype import Doctype
 
+
+logger = logging.getLogger(__name__)
 
 DOCTYPES = ["subclass_a", "subclass_b", "subclass_c"]
 
@@ -21,9 +24,15 @@ class DoctypeRegistryTest(unittest.TestCase):
     class _TestDoctypeSubclassC(metaclass=DoctypeRegistry):
         doctype = DOCTYPES[2]
 
+    class _TestDoctypeSubclassD(metaclass=DoctypeRegistry):
+        pass
+
     def test_registry(self):
         for doctype in DOCTYPES:
             self.assertIn(doctype, DoctypeRegistry.get_registry())
+
+    def test_registry_noattr(self):
+        self.assertIn(self._TestDoctypeSubclassD.__name__, DoctypeRegistry.get_registry())
 
 
 class DoctypeTest(unittest.TestCase):
@@ -52,11 +61,11 @@ class DoctypeTest(unittest.TestCase):
             "indexed_time",
             "name",
         ]
-        schema_keys = list(Doctype.get_common_schema().keys())
+        schema_keys = list(Doctype.common_schema.keys())
         for req_key in required_keys:
             self.assertIn(req_key, schema_keys)
         # Ensure base schema is empty
-        self.assertDictEqual(Doctype.get_schema(), {})
+        self.assertDictEqual(Doctype.schema, {})
 
     def test_doctype(self):
         """Test the doctype class var is configured and accessible"""

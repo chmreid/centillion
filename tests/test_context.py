@@ -1,7 +1,11 @@
 import os
+import logging
 import unittest
 
-from . import TempCentillionConfig
+from .context import TempCentillionConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 def get_simple_config():

@@ -24,7 +24,7 @@ class Doctype(metaclass=DoctypeRegistry):
     - constructor: takes credentials as input, validate credentials
     - validate credentials: does what it says
     - schema (class attribute)
-    - get_remote_list: list of remote document IDs and last modified date
+    - get_remote_map: list of remote document IDs and last modified date
     - get_by_id: get document by index ID, return item matching common + doctype schema
     - search result template (static method): render a search result of this doctype
     """
@@ -50,8 +50,8 @@ class Doctype(metaclass=DoctypeRegistry):
     def validate_credentials(self):
         self._not_implemented("validate_credentials")
 
-    def get_remote_list(self):
-        self._not_implemented("get_remote_list")
+    def get_remote_map(self):
+        self._not_implemented("get_remote_map")
 
     def get_by_id(self, doc_id):
         self._not_implemented("get_by_id")
@@ -63,18 +63,6 @@ class Doctype(metaclass=DoctypeRegistry):
     @classmethod
     def get_jinja_template(cls):
         cls._not_implemented("get_jinja_template")
-
-    @classmethod
-    def get_common_schema(cls):
-        """Return a copy of the common schema shared by all document types"""
-        logger.debug("Fetching common schema")
-        return cls.common_schema.copy()
-
-    @classmethod
-    def get_schema(cls):
-        """Return a copy of this doctype's custom, non-common schema fields"""
-        logger.debug("Fetching class schema")
-        return cls.schema.copy()
 
     @classmethod
     def get_doctype(cls):

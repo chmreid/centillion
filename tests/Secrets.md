@@ -1,18 +1,25 @@
-Contents of `secrets.tar.gz`:
-- `credentials.json` - file containing OAuth key/token
-  for `cent17710n@gmail.com` Google account (used for tests)
-- `secrets.py` - python file containing variables with
-  Github and Disqus API tokens (used for tests)
-  - `GITHUB_OAUTH_CLIENT_ID` (access protection)
-  - `GITHUB_OAUTH_CLIENT_SECRET` (access protection)
-  - `GITHUB_TOKEN` (github)
-  - `DISQUS_TOKEN` (disqus)
-  - `SECRET_KEY` (flask)
+# Secrets
 
-Instructions for encrypting/decrypting can be found
-in the Travis documentation here:
+## Summary
+
+This repo requires the use of secrets for integration tests, which make
+real API calls to real cloud services.
+
+## Travis Secrets
+
+We have an encrypted secrets file called `secrets.tar.gz` that contains
+files useful for Travis integration tests.
+
+Contents of `secrets.tar.gz`:
+
+- `config/config.integration.json` - integration credentials, containing working OAuth keys
+  for Google and Github and any other services
+
+Instructions for encrypting/decrypting can be found in the Travis documentation here:
 
 <https://docs.travis-ci.com/user/encrypting-files/#manual-encryption>
+
+### Quick Start: Secrets with Travis
 
 **Step 1: Encrypt Secret File**
 
