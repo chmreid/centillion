@@ -63,9 +63,3 @@ class Doctype(metaclass=DoctypeRegistry):
     @classmethod
     def get_jinja_template(cls):
         cls._not_implemented("get_jinja_template")
-
-    @classmethod
-    def get_doctype(cls):
-        """Return the string label for this doctype"""
-        logger.debug("Fetching class doctype")
-        return cls.doctype
