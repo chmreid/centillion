@@ -26,7 +26,7 @@ class Doctype(metaclass=DoctypeRegistry):
     - schema (class attribute)
     - get_remote_map: list of remote document IDs and last modified date
     - get_by_id: get document by index ID, return item matching common + doctype schema
-    - search result template (static method): render a search result of this doctype
+    - get_jinja_template (static method): render a search result of this doctype
     """
     common_schema = dict(
         id=fields.ID(stored=True, unique=True),
