@@ -86,8 +86,19 @@ class Config(object):
 
     _CENTILLION_ROOT: typing.Optional[str] = None
     _CENTILLION_TMPDIR: typing.Optional[str] = None
+    _CENTILLION_INDEXDIR: typing.Optional[str] = None
     _DOCTYPES_LIST: typing.Optional[typing.List[str]] = None
     _DOCTYPES_NAMES_MAP: typing.Optional[typing.Dict[str, typing.List[str]]] = None
+
+    @classmethod
+    def reset(cls) -> None:
+        cls._CONFIG_FILE = None
+        cls._CONFIG = None
+        cls._CENTILLION_ROOT = None
+        cls._CENTILLION_TMPDIR = None
+        cls._CENTILLION_INDEXDIR = None
+        cls._DOCTYPES_LIST = None
+        cls._DOCTYPES_NAMES_MAP = None
 
     @classmethod
     def get_centillion_root(cls) -> str:
@@ -96,23 +107,35 @@ class Config(object):
                 cls._CENTILLION_ROOT = cls._CONFIG['centillion_root']
             else:
                 cls._CENTILLION_ROOT = Config.get_required_env_var('CENTILLION_ROOT')
-            if not os.path.isdir(cls._CENTILLION_ROOT):
-                raise CentillionConfigException(f"Error: Path {cls._CENTILLION_ROOT} is not a directory")
+        if not os.path.isdir(cls._CENTILLION_ROOT):
+            raise CentillionConfigException(f"Error: Path {cls._CENTILLION_ROOT} is not a directory")
         return cls._CENTILLION_ROOT
+
+    @classmethod
+    def get_centillion_indexdir(cls) -> str:
+        if cls._CENTILLION_INDEXDIR is None:
+            if 'centillion_index' in cls._CONFIG:
+                cls._CENTILLION_INDEXDIR = cls._CONFIG['centillion_index']
+            else:
+                centillion_root = Config.get_centillion_root()
+                centillion_indexdir = os.path.join(centillion_root, 'index')
+                cls._CENTILLION_INDEXDIR = centillion_indexdir
+        if not os.path.isdir(cls._CENTILLION_INDEXDIR):
+            subprocess.call(['mkdir', '-p', cls._CENTILLION_INDEXDIR])
+        return cls._CENTILLION_INDEXDIR
 
     @classmethod
     def get_centillion_tmpdir(cls) -> str:
         if cls._CENTILLION_TMPDIR is None:
             centillion_root = Config.get_centillion_root()
-            tmp_dir = os.path.join(centillion_root, TMPDIR_NAME)
-            if not os.path.exists(tmp_dir):
-                subprocess.call(['mkdir', '-p', tmp_dir])
-            cls._CENTILLION_TMPDIR = tmp_dir
+            cls._CENTILLION_TMPDIR = os.path.join(centillion_root, TMPDIR_NAME)
+        if not os.path.exists(cls._CENTILLION_TMPDIR):
+            subprocess.call(['mkdir', '-p', cls._CENTILLION_TMPDIR])
         return cls._CENTILLION_TMPDIR
 
     @classmethod
     def get_doctypes(cls) -> typing.List[str]:
-        """Return a list of all doctypes being indexed by centillion."""
+        """Return a list of all doctypes present in the centillion config file."""
         if cls._DOCTYPES_LIST is None:
             doctypes = set()
             for cred in cls._CONFIG['doctypes']:

@@ -31,6 +31,17 @@ class CentillionConfigException(CentillionException):
         )
 
 
+class CentillionSearchIndexException(CentillionException):
+    """
+    Class for search index-related exceptions, used by search submodule.
+    """
+
+    def __init__(self, title: str = "Error: the centillion search index has a problem", *args, **kwargs) -> None:
+        super().__init__(
+            requests.codes.internal_server_error, "Search Index Error", title, *args, **kwargs
+        )
+
+
 class CentillionForbiddenException(CentillionException):
     """
     Forbidden exception class, raised by Flask auth layer.

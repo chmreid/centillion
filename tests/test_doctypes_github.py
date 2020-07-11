@@ -1,3 +1,4 @@
+import logging
 import typing
 import unittest
 from github import Github  # GithubException
@@ -20,8 +21,15 @@ from centillion.error import CentillionException
 
 from .context import TempCentillionConfig
 from .decorators import integration_test
-from .mixins import (ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin)
+from .mixins import (
+    IntegrationTestMixin,
+    ConstructorTestMixin,
+    SchemaTestMixin,
+    RemoteListTestMixin
+)
 
+
+logger = logging.getLogger(__name__)
 
 # List of Github doctypes (excluding base type)
 # (Integration tests should include one credential per doctype in this list in config file)
@@ -30,7 +38,7 @@ GITHUB_DOCTYPES = ["github_issue_pr", "github_file", "github_markdown"]
 # NOTE: add test repo names/branches/head commit info
 
 
-class GithubDoctypeUtilsTest(unittest.TestCase):
+class GithubDoctypeUtilsTest(IntegrationTestMixin):
     """
     Check utilities from the Github Doctype class.
     Integration tests require use of PyGithub API.
@@ -77,7 +85,7 @@ class GithubDoctypeUtilsTest(unittest.TestCase):
             self.assertEqual(get_issue_pr_no_from_url(url), num)
 
 
-class GithubDoctypePyGithubUtilsTest(unittest.TestCase):
+class GithubDoctypePyGithubUtilsTest(IntegrationTestMixin):
     """
     Check utilities from the Github Doctype class
     that use a PyGithub API instance.
@@ -182,10 +190,9 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
 
     def test_github_base_doctype(self):
         """Test the GithubBaseDoctype constructor, mocking the Github API creation/credentials validation step"""
+        # Set a temporary config file
         # with mock.patch("centillion.doctypes.github.Github") as gh:
         #     GithubBaseDoctype(name)
-        #
-        # Above assumes there is no cross-checking with config file credentials section
         pass
 
     @integration_test
@@ -219,8 +226,8 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         ]
         for name, doctype in names_doctypes:
             with TempCentillionConfig(get_invalid_config(name, doctype)) as config_file:
+                self.assertEqual(Config._CONFIG_FILE, config_file)
                 with self.assertRaises(CentillionException):
-                    self.assertEqual(Config._CONFIG_FILE, config_file)
                     registry = Doctype.get_registry()
                     DoctypeCls = registry[doctype]
                     DoctypeCls(name)
@@ -269,20 +276,22 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         pass
 
     @integration_test
-    def test_get_remote_list(self):
+    def test_get_remote_map(self):
         doctypes_names_map = Config.get_doctypes_names_map()
-        self.check_doctype_remote_list(GITHUB_DOCTYPES, doctypes_names_map)
+        self.check_doctype_remote_map(GITHUB_DOCTYPES, doctypes_names_map)
 
     @integration_test
-    def test_github_issues_prs(self):
-        """Test the get_by_id (and get_schema) methods for the Github issue/PR doctype"""
+    def test_github_issues_prs_get_by_id(self):
+        """Test the get_by_id methods for the Github issue/PR doctype"""
         this_doctype = "github_issue_pr"
+
+        # Get a github issue/pr doctype with real credentials from the integration config file
         doctypes_names_map = Config.get_doctypes_names_map()
         names = doctypes_names_map[this_doctype]
         name = names[0]
         doctype = GithubIssuePRDoctype(name)
 
-        # Test an issue
+        # Test a real issue
         issue_id = "https://github.com/charlesreid1/centillion-search-demo/issues/1"
         doc = doctype.get_by_id(issue_id)
         self.assertEqual(issue_id, doc["id"])
@@ -293,16 +302,18 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         self.assertEqual("charlesreid1/centillion-search-demo", doc["repo_name"])
         self.assertIn("certain Seattle drivers", doc["content"])
 
-        # Test a pull request (TBA)
+        # Test a real pull request (TBA)
 
     @integration_test
-    def test_github_files(self):
-        """Test the get_by_id (and get_schema) methods for the Github file doctype"""
+    def test_github_files_get_by_id(self):
+        """Test the get_by_id methods for the Github file doctype"""
+        # Test with real github file (TBA)
         pass
 
     @integration_test
-    def test_github_markdown(self):
-        """Test the get_by_id (and get_schema) methods for the Github markdown doctype"""
+    def test_github_markdown_get_by_id(self):
+        """Test the get_by_id methods for the Github markdown doctype"""
+        # Test with real github markdown (TBA)
         pass
 
     def _get_github_doctype_classes(self) -> typing.List[object]:

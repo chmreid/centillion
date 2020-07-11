@@ -7,7 +7,6 @@ import tempfile
 from io import StringIO
 
 from centillion.config import Config
-from centillion.error import CentillionConfigException
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +26,14 @@ class TempCentillionConfig(object):
         sample_config = { ... }
         with TempCentillionConfig(sample_config) as config_file:
             print(f"Now the config file is set to {config_file}")
+
+    By default, the centillion_root variable is set to a
+    temporary directory that is created/destroyed with this
+    context manager. This can be overridden with the
+    centillion_root argument:
+
+        sample_config = { ... }
+        with TempCentillionConfig(sample_config, centillion_root="/tmp/tmp613o6l9na3ihffan")
     """
 
     def __init__(self, config_dict, *args, **kwargs):
@@ -38,8 +45,18 @@ class TempCentillionConfig(object):
         self.temp_dir = tempfile.mkdtemp()
         # Make a temp config file
         _, self.temp_json = tempfile.mkstemp(suffix=".json", dir=self.temp_dir)
-        # Set the centillion root dir to the temp dir
-        self.config_dict['centillion_root'] = self.temp_dir
+        # Check for centillion as follows:
+        # - centillion_root kwarg (top priority)
+        # - centillion_root in config file (passed along)
+        # - centillion_root default value (temp dir)
+        rt = 'centillion_root'
+        if rt not in kwargs.keys():
+            if rt not in config_dict.keys():
+                self.config_dict[rt] = self.temp_dir
+            else:
+                self.config_dict[rt] = config_dict[rt]
+        else:
+            self.config_dict[rt] = kwargs[rt]
 
     def __enter__(self, *args, **kwargs):
         """This is what's returned to the "as X" portion of the context manager"""
@@ -59,11 +76,8 @@ class TempCentillionConfig(object):
         os.unlink(self.temp_json)
         # Delete temp dir
         shutil.rmtree(self.temp_dir)
-        # Restoring can be problematic if prior config file does not exist
-        try:
-            Config(self._old_config_file)
-        except CentillionConfigException:
-            pass
+        # Reset all config variables
+        Config.reset()
 
     def _write_config(self, target: str, contents: str):
         """Utility method: write string contents to config file"""

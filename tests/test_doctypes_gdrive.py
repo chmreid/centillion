@@ -1,5 +1,6 @@
 import unittest
 import typing
+import logging
 
 from centillion.config import Config
 from centillion.doctypes.doctype import Doctype
@@ -7,12 +8,14 @@ from centillion.doctypes.gdrive import (
     GDriveBaseDoctype,
     GDriveFileDoctype,
     GDriveDocxDoctype,
-    get_gdrive_service
+    get_gdrive_service,
 )
 
 from .decorators import integration_test
-from .mixins import (ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin)
+from .mixins import IntegrationTestMixin, ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin
 
+
+logger = logging.getLogger(__name__)
 
 # List of Github doctypes (excluding base type)
 # (Integration tests should include one credential per doctype in this list in config file)
@@ -24,7 +27,7 @@ class FindTokenPathTest(unittest.TestCase):
 
 
 @integration_test
-class GetGDriveServiceTest(unittest.TestCase):
+class GetGDriveServiceTest(IntegrationTestMixin):
     """
     Test the get_gdrive_service() method
     """
@@ -40,16 +43,18 @@ class GetGDriveServiceTest(unittest.TestCase):
         # Now create a GDrive service for each credential
         for name in names:
             conf = Config.get_doctype_config(name)
-            token_path = conf['token_path']
+            token_path = conf["token_path"]
             get_gdrive_service(token_path)
 
 
-class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin):
+class GDriveDoctypeTest(
+    IntegrationTestMixin, ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin
+):
     """
     Test Google Drive doctypes.
     """
 
-    def test_doctypes(self):
+    def test_doctype_names(self):
         """Test the doctype attribute of each GDrive doctype"""
         self.assertEqual(GDriveBaseDoctype.doctype, "gdrive_base")
         self.assertEqual(GDriveFileDoctype.doctype, "gdrive_file")
@@ -114,9 +119,9 @@ class GDriveDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         pass
 
     @integration_test
-    def test_get_remote_list(self):
+    def test_get_remote_map(self):
         doctypes_names_map = Config.get_doctypes_names_map()
-        self.check_doctype_remote_list(GDRIVE_DOCTYPES, doctypes_names_map)
+        self.check_doctype_remote_map(GDRIVE_DOCTYPES, doctypes_names_map)
 
     @integration_test
     def test_gdrive_file(self):

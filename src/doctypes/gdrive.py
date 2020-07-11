@@ -143,9 +143,9 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         """
         # Turn the whoosh_search_result into something that works with Jinja template below
         result = SearchResult()
-        for common_key in cls.get_common_schema():
+        for common_key in cls.common_schema:
             result[common_key] = whoosh_search_result.getattr(common_key)
-        for gh_key in cls.get_schema():
+        for gh_key in cls.schema:
             result[gh_key] = whoosh_search_result.getattr(gh_key)
 
         # Parse and process datetimes into strings
@@ -183,20 +183,19 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         """
         return template
 
-    def get_remote_list(self) -> typing.List[typing.Tuple[datetime.datetime, str]]:
+    def get_remote_map(self) -> typing.Dict[str, datetime.datetime]:
         """
-        Compile a list of document IDs for documents that can be indexed
-        at the remote, and their last modified date.
+        Compile a map of document IDs for documents that can be indexed
+        at the remote, to their last modified date.
 
         Google Drive uses GDrive ID for the search index ID.
 
-        :returns: list of (last_modified_date, gdrive id) tuples
-                  (types are datetime.datetime and str)
+        :returns: map of gdrive_id to last_modified_date
         """
         drive = self.drive
 
-        # Return value: list of (last_modified_date, gdrive_id) tuples
-        remote_list = []
+        # Return value: map of gdrive_id to last_modified_date
+        remote_map: typing.Dict[str, datetime.datetime] = {}
 
         # To iterate over all files, use the list() function of drive
         nextPageToken = None  # This is the trick to get this to work
@@ -266,7 +265,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
                 if not ignore_file:
                     key = fid
                     date = dateutil.parser.parse(f["modifiedTime"])
-                    remote_list.append((date, key))
+                    remote_map[key] = date
 
             # End pagination early for tests
             if (
@@ -275,8 +274,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             ):
                 break
 
-        # Note: remote_list may be an empty list!
-        return remote_list
+        return remote_map
 
     def get_by_id(self, doc_id):
         """
@@ -292,7 +290,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             kind=self.doctype,
             created_time=dateutil.parser.parse(item["createdTime"]),
             modified_time=dateutil.parser.parse(item["modifiedTime"]),
-            indexed_time=datetime.datetime.now(),
+            indexed_time=datetime.datetime.now().replace(microsecond=0),
             name=item["name"],
             file_name=item["name"],
             file_url=item["webViewLink"],

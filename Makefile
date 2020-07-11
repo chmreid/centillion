@@ -1,7 +1,10 @@
 include common.mk
-MODULES=src/doctypes tests
+MODULES=src/search src/doctypes tests
 
 all: test
+
+
+# Checks
 
 lint:
 	flake8 $(MODULES)
@@ -9,15 +12,18 @@ lint:
 mypy:
 	mypy --ignore-missing-imports --no-strict-optional $(MODULES)
 
+
+# Tests
+
 tests:=$(wildcard tests/test_*.py)
 
-test: $(tests)
+test: mypy lint
 	@echo $(tests)
-	pytest $(tests)
+	pytest --cov=centillion -v tests
 
 # A pattern rule that runs a single test script
 $(tests): %.py : mypy lint
-	pytest -v $*.py
+	pytest --cov=centillion -v $*.py
 
 all_test:
 	$(MAKE) CENTILLION_TEST_MODE="standalone integration" test
@@ -27,6 +33,9 @@ standalone_test:
 
 integration_test:
 	$(MAKE) CENTILLION_TEST_MODE="integration" test
+
+
+# Requirements
 
 refresh_all_requirements:
 	@echo -n '' >| requirements.txt

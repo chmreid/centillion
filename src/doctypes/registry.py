@@ -21,7 +21,7 @@ class DoctypeRegistry(type):
             new_name = new_cls.doctype
         except AttributeError:
             new_name = new_cls.__name__
-            logger.warn(f"Class attribute doctype not defined for {new_name}")
+            logger.warning(f"Class attribute doctype not defined for {new_name}")
         cls.REGISTRY[new_name] = new_cls
         return new_cls
 
