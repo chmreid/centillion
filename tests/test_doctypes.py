@@ -9,9 +9,11 @@ logger = logging.getLogger(__name__)
 
 DOCTYPES = ["subclass_a", "subclass_b", "subclass_c"]  # subclass_d is intentionally excluded
 
+
 class DoctypeRegistryTest(unittest.TestCase):
     """
     Check the DoctypeRegistry metaclass works as intended
+    (note, this does not check the Doctype class)
     """
 
     class _TestDoctypeSubclassA(metaclass=DoctypeRegistry):
@@ -35,22 +37,16 @@ class DoctypeRegistryTest(unittest.TestCase):
         """Test that the new doctypes are in the Doctype registry, even if no doctype attribute is defined"""
         self.assertIn(self._TestDoctypeSubclassD.__name__, DoctypeRegistry.get_registry())
 
-    def test_registry(self):
-        """
-        Check that the doctype registry returns instances of the correct class
-        """
-        self.assertEqual(type(cls.get_registry()["subclass_a"]), self._TestDoctypeSubclassA)
-        self.assertEqual(type(cls.get_registry()["subclass_b"]), self._TestDoctypeSubclassB)
-        self.assertEqual(type(cls.get_registry()["subclass_c"]), self._TestDoctypeSubclassC)
-        self.assertEqual(type(cls.get_registry()[self._TestDoctypeSubclassD.__name__]), self._TestDoctypeSubclassD)
-
 
 class DoctypeVirtualMethodsTest(unittest.TestCase):
     """
-    Check that if a derived doctype class does not have virtual methods defined,
+    Check that if a derived Doctype child class instance does not have virtual methods defined,
     centillion will raise a NotImplementedError.
     """
-    class _TestDoctypeVirtualMethodsSubclassA(metaclass=DoctypeRegistry):
+
+    class _TestDoctypeVirtualMethodsSubclassA(Doctype):
+        doctype = "virtualmethods_a"
+
         def __init__(self, *args, **kwargs):
             pass
 
@@ -64,7 +60,7 @@ class DoctypeVirtualMethodsTest(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             instanceA.get_remote_map()
         with self.assertRaises(NotImplementedError):
-            instanceA.get_by_id()
+            instanceA.get_by_id('')
         with self.assertRaises(NotImplementedError):
             instanceA.get_jinja_template()
 
@@ -104,13 +100,6 @@ class DoctypeTest(unittest.TestCase):
     def test_doctype(self):
         """Test the doctype class var is configured and accessible"""
         self.assertEqual(Doctype.doctype, "base")
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
