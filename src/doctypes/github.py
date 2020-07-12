@@ -52,18 +52,18 @@ def convert_gh_file_html_url_to_raw_url(gh_file_html_url: str) -> str:
     return u
 
 
-def convert_github_user_to_github_user_links(github_user: str) -> str:
+def convert_github_user_to_github_user_links(github_users_csv: str) -> str:
     """
     Given a comma-separated list of Github users,
     return linkified versions of each Github username.
 
-    Example Input: "monkeywrench123, tampermonkey456"
-    Example Output: "<a href='http://github.com/monkeywrench123'>@monkeywrench123</a>, ..."
+    Example Input: 'monkeywrench123, tampermonkey456'
+    Example Output: '<a href="http://github.com/monkeywrench123">@monkeywrench123</a>, ...'
 
     :param github_user: string containing comma-separated list of Github usernames
     :returns: string containing comma-separated, linkified Github usernames
     """
-    github_users = [ghu.strip() for ghu in ",".split(github_user)]
+    github_users = [ghu.strip() for ghu in github_users_csv.split(",")]
     github_user_atag_template = '<a href="https://github.com/{user}">@{user}</a>'
     github_user_atags = [github_user_atag_template.format(user=user) for user in github_users]
     github_user_links = ", ".join(github_user_atags)
