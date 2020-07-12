@@ -87,7 +87,7 @@ def always(f):
         Config(STANDALONE_CONFIG_PATH)
     if is_integration():
         Config(INTEGRATION_CONFIG_PATH)
-        return f
+    return f
 
 
 def _test_mode():

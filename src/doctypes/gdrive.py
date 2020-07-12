@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 ###################
 
 
+DRIVE_FIELDS = "id, name, kind, mimeType, createdTime, modifiedTime, webViewLink, owners"
+
+
 def get_gdrive_service(token_path):
     """
     This requires that the operator do the following:
@@ -219,7 +222,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             results = drive.list(  # type: ignore
                 pageSize=ps,
                 pageToken=nextPageToken,
-                fields="files(id, kind, createdTime, modifiedTime, mimeType, name, owners, webViewLink)",
+                fields="files(%s)" % (DRIVE_FIELDS),
                 spaces="drive",
             ).execute()
 
@@ -295,12 +298,12 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         drive = self.drive
         item = drive.get(
             fileId=doc_id,
-            fields="id, name, webViewLink, mimeType, md5Checksum, owners, createdTime, modifiedTime"  # noqa
+            fields=DRIVE_FIELDS,
         ).execute()
 
         doc = dict(
             id=doc_id,
-            fingerprint=item["md5Checksum"],
+            fingerprint=item["id"],
             kind=self.doctype,
             created_time=dateutil.parser.parse(item["createdTime"]),
             modified_time=dateutil.parser.parse(item["modifiedTime"]),

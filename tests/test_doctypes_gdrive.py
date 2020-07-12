@@ -109,6 +109,7 @@ class GDriveDoctypeTest(
                 doctype_cls = registry[doctype]
                 name = names[0]
                 doctype_cls(name)
+                import pdb; pdb.set_trace()  # noqa
                 with self.assertRaises(TypeError):
                     doctype_cls(*junkargs, **junkkwargs)
 
