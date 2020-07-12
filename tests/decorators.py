@@ -57,8 +57,7 @@ def skip_on_travis(test_item):
 def standalone_test(f):
     @wraps(f)
     def wrapper(self, *args, **kwargs):
-        if is_standalone():
-            Config(STANDALONE_CONFIG_PATH)
+        Config(STANDALONE_CONFIG_PATH)
         unittest.skipUnless(is_standalone(), "Skipping standalone test")(f)(self)
         Config.reset()
     return wrapper
@@ -71,8 +70,7 @@ def is_standalone():
 def integration_test(f):
     @wraps(f)
     def wrapper(self, *args, **kwargs):
-        if is_integration():
-            Config(INTEGRATION_CONFIG_PATH)
+        Config(INTEGRATION_CONFIG_PATH)
         unittest.skipUnless(is_integration(), "Skipping integration test")(f)(self)
         Config.reset()
     return wrapper
