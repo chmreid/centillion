@@ -219,7 +219,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             results = drive.list(  # type: ignore
                 pageSize=ps,
                 pageToken=nextPageToken,
-                fields="nextPageToken, files(id, kind, createdTime, modifiedTime, mimeType, name, owners, webViewLink)",
+                fields="id, kind, createdTime, modifiedTime, mimeType, name, owners, webViewLink",
                 spaces="drive",
             ).execute()
 
@@ -293,7 +293,10 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         an item to the search index matching the index schema.
         """
         drive = self.drive
-        item = drive.get(fileId=doc_id).execute()
+        item = drive.get(
+            fileId=doc_id,
+            fields="id, name, webViewLink, mimeType, md5Checksum, owners, createdTime, modifiedTime"  # noqa
+        ).execute()
 
         doc = dict(
             id=doc_id,
@@ -399,12 +402,13 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         Assemble and return an item to the search index
         matching the search index schema.
         """
-        # Modify the parent class's method
+        # First run the parent class version of this method,
+        # then add the .docx content to that result.
         doc = super().get_by_id(doc_id)
 
         # Extract content and add it to the doc
         drive = self.drive
-        item = drive.get(fileId=doc_id).execute()
+        item = drive.get(fileId=doc_id, fields="nextPageToken, files(id, name, mimeType)").execute()
         content = self._extract_docx_content(item)
         doc["content"] = content
 
