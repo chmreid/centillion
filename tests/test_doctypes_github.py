@@ -12,6 +12,7 @@ from centillion.doctypes.github import (
     GithubMarkdownDoctype,
     get_gh_file_url,
     convert_gh_file_html_url_to_raw_url,
+    convert_github_user_to_github_user_links,
     get_repo_branch_from_file_url,
     get_repo_name_from_url,
     get_issue_pr_no_from_url,
@@ -56,6 +57,12 @@ class GithubDoctypeUtilsTest(IntegrationTestMixin):
         # convert_gh_file_html_url_to_raw_url
         r = f"https://raw.githubusercontent.com/{repo_name}/{branch_name}/{repo_path}"
         self.assertEqual(convert_gh_file_html_url_to_raw_url(u), r)
+
+        # convert_github_user_to_github_user_links
+        github_users = 'monkeywrench123, tampermonkey456'
+        github_user_links_gold = '<a href="https://github.com/monkeywrench123">@monkeywrench123</a>, <a href="https://github.com/tampermonkey456">@tampermonkey456</a>'  # noqa
+        github_user_links_lead = convert_github_user_to_github_user_links(github_users)
+        self.assertEqual(github_user_links_lead, github_user_links_gold)
 
         # get_repo_branch_from_file_url
         result_repo, result_branch, result_path = get_repo_branch_from_file_url(u)
