@@ -93,8 +93,9 @@ class GDriveDoctypeTest(
         for doctype, names in doctypes_names_map.items():
             name = names[0]
             if doctype in GDRIVE_DOCTYPES:
-                # TODO: This should use the registry
-                GDriveBaseDoctype(name)
+                registry = Doctype.get_registry()
+                doctype_cls = registry[doctype]
+                doctype_cls(name)
 
     @standalone_test
     def test_gdrive_doctype_constructors_invalid_credentials(self):
@@ -103,8 +104,9 @@ class GDriveDoctypeTest(
         for doctype, names in doctypes_names_map.items():
             name = names[0]
             if doctype in GDRIVE_DOCTYPES:
-                # TODO: This should use the registry
-                GDriveBaseDoctype(name)
+                registry = Doctype.get_registry()
+                doctype_cls = registry[doctype]
+                doctype_cls(name)
 
     def test_gdrive_doctype_constructors_invalid(self):
         # Check that invalid inputs to constructor will not work
@@ -113,9 +115,11 @@ class GDriveDoctypeTest(
             if doctype in GDRIVE_DOCTYPES:
                 junkargs = ['foo', 'bar', 1000000]
                 junkkwargs = {'a': 10, 'b': 20}
+                registry = Doctype.get_registry()
+                doctype_cls = registry[doctype]
+                doctype_cls(name)
                 with self.assertRaises(TypeError):
-                    # TODO: this should use the registry
-                    GDriveBaseDoctype(*junkargs, **junkkwargs)
+                    doctype_cls(*junkargs, **junkkwargs)
 
     def test_render_search_result(self):
         # Mock whoosh search result
