@@ -26,7 +26,8 @@ $(tests): %.py : mypy lint
 	pytest --cov=centillion -v $*.py
 
 all_test:
-	$(MAKE) CENTILLION_TEST_MODE="standalone integration" test
+	$(MAKE) CENTILLION_TEST_MODE="standalone" test
+	$(MAKE) CENTILLION_TEST_MODE="integration" test
 
 standalone_test:
 	$(MAKE) CENTILLION_TEST_MODE="standalone" test
