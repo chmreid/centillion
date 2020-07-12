@@ -32,12 +32,12 @@
         {
             "name": "plinkfile",
             "doctype": "gdrive_file",
-            "token_path": "config.json"
+            "token_path": "non-existent-credentials.json"
         },
         {
             "name": "plinkdocx",
             "doctype": "gdrive_docx",
-            "token_path": "config.json"
+            "token_path": "non-existent-credentials.json"
         }
     ]
 }
