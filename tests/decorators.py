@@ -64,7 +64,7 @@ def standalone_test(f):
 
 
 def is_standalone():
-    return "standalone" in _test_mode()
+    return _test_mode() == "standalone"
 
 
 def integration_test(f):
@@ -77,7 +77,7 @@ def integration_test(f):
 
 
 def is_integration():
-    return "integration" in _test_mode()
+    return _test_mode() == "integration"
 
 
 def always(f):
@@ -89,5 +89,5 @@ def always(f):
 
 
 def _test_mode():
-    # TODO: document this env var. if unset, run standalone unit tests
+    # If this environment variable is unset, it will be set to "standalone"
     return os.environ.get("CENTILLION_TEST_MODE", "standalone")
