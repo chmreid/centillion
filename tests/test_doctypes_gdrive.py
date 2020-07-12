@@ -90,33 +90,24 @@ class GDriveDoctypeTest(
     def test_gdrive_doctype_constructors(self):
         """Test the constructor of each GDrive doctype with (real) integration credentials"""
         doctypes_names_map = Config.get_doctypes_names_map()
-        for doctype, names in doctypes_names_map.items():
-            name = names[0]
-            if doctype in GDRIVE_DOCTYPES:
-                registry = Doctype.get_registry()
-                doctype_cls = registry[doctype]
-                doctype_cls(name)
+        self.check_doctype_constructors(GDRIVE_DOCTYPES, doctypes_names_map)
 
     @standalone_test
     def test_gdrive_doctype_constructors_invalid_credentials(self):
         # Set invalid credentials and ensure validate credentials method catches it
         doctypes_names_map = Config.get_doctypes_names_map()
-        for doctype, names in doctypes_names_map.items():
-            name = names[0]
-            if doctype in GDRIVE_DOCTYPES:
-                registry = Doctype.get_registry()
-                doctype_cls = registry[doctype]
-                doctype_cls(name)
+        self.check_doctype_constructors(GDRIVE_DOCTYPES, doctypes_names_map)
 
-    def test_gdrive_doctype_constructors_invalid(self):
+    def test_gdrive_doctype_constructors_invalid_params(self):
         # Check that invalid inputs to constructor will not work
+        registry = Doctype.get_registry()
         doctypes_names_map = Config.get_doctypes_names_map()
         for doctype, names in doctypes_names_map.items():
             if doctype in GDRIVE_DOCTYPES:
                 junkargs = ['foo', 'bar', 1000000]
                 junkkwargs = {'a': 10, 'b': 20}
-                registry = Doctype.get_registry()
                 doctype_cls = registry[doctype]
+                name = names[0]
                 doctype_cls(name)
                 with self.assertRaises(TypeError):
                     doctype_cls(*junkargs, **junkkwargs)
@@ -155,6 +146,36 @@ class GDriveDoctypeTest(
     def test_get_remote_map(self):
         doctypes_names_map = Config.get_doctypes_names_map()
         self.check_doctype_remote_map(GDRIVE_DOCTYPES, doctypes_names_map)
+
+    @integration_test
+    def test_gdrive_files_get_by_id(self):
+        """Test the get_by_id methods for GDrive files"""
+        this_doctype = "gdrive_file"
+
+        # Get a doctype class instance using real credentials
+        doctypes_names_map = Config.get_doctypes_names_map()
+        names = doctypes_names_map[this_doctype]
+        name = names[0]
+        doctype = GDriveFileDoctype(name)
+
+        # Test a real file
+        file_id = ""
+        doctype.get_by_id(file_id)
+
+    @integration_test
+    def test_gdrive_docx_get_by_id(self):
+        """Test the get_by_id methods for GDrive docx documents"""
+        this_doctype = "gdrive_docx"
+
+        # Get a doctype class instance using real credentials
+        doctypes_names_map = Config.get_doctypes_names_map()
+        names = doctypes_names_map[this_doctype]
+        name = names[0]
+        doctype = GDriveFileDoctype(name)
+
+        # Test a real file
+        docx_id = ""
+        doctype.get_by_id(docx_id)
 
     def _get_gdrive_doctype_classes(self) -> typing.List[typing.Any]:
         """
