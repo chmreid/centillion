@@ -92,26 +92,6 @@ class GDriveDoctypeTest(
         doctypes_names_map = Config.get_doctypes_names_map()
         self.check_doctype_constructors(GDRIVE_DOCTYPES, doctypes_names_map)
 
-    @standalone_test
-    def test_gdrive_doctype_constructors_invalid_credentials(self):
-        # Set invalid credentials and ensure validate credentials method catches it
-        doctypes_names_map = Config.get_doctypes_names_map()
-        self.check_doctype_constructors(GDRIVE_DOCTYPES, doctypes_names_map)
-
-    @standalone_test
-    def test_gdrive_doctype_constructors_missing_credentials(self):
-        # Check that missing credentials constructor will not allow doctype constructor to be called
-        registry = Doctype.get_registry()
-        doctypes_names_map = Config.get_doctypes_names_map()
-        for doctype, names in doctypes_names_map.items():
-            if doctype in GDRIVE_DOCTYPES:
-                doctype_cls = registry[doctype]
-                name = names[0]
-                doctype_cls(name)
-                with self.assertRaises(CentillionConfigException):
-                    # CentillionConfigException due to missing .json credentials file
-                    doctype_cls(name)
-
     @integration_test
     def test_gdrive_doctype_constructors_invalid_params(self):
         # Check that invalid inputs to constructor will not work
