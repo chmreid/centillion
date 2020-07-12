@@ -93,6 +93,7 @@ class GDriveBaseDoctype(Doctype):
     - constructor
     - validate credentials
     """
+    # self.drive stores a reference to service.files()
     drive = None  # type: ignore
 
     def __init__(self, *args, **kwargs):
@@ -113,7 +114,6 @@ class GDriveBaseDoctype(Doctype):
         tp = config["token_path"]
         logger.info(f"Doctype {self.name} using credentials file at {tp}")
         self.validate_credentials(tp)
-        self.token_path = tp
 
     def validate_credentials(self, token_path):
         # get_gdrive_service will handle checking whether token_path exists
@@ -281,8 +281,8 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         Retrieve a remote document given its id, and return
         an item to the search index matching the index schema.
         """
-        # uses get method: https://developers.google.com/drive/api/v3/reference/files/get
-        item = self.drive.files().get(doc_id)
+        drive = self.drive
+        item = drive.get(fileId=doc_id).execute()
 
         doc = dict(
             id=doc_id,
@@ -310,8 +310,9 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         :param fname: name of the file
         :returns bool: return True if this file should be ignored when compiling the list of remote
         """
-        # Eventually this will check if a GDriveDocxDoctype is activated
-        # If so, ignore docx files to avoid duplicate search index entries
+        # Get document registry
+        # Check if gdrive_docx is activated
+        # If so, ignore docx files (use the GDrive docx class's _ignore_file_check)
         return False
 
 
@@ -383,21 +384,28 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         Assemble and return an item to the search index
         matching the search index schema.
         """
-        # uses get method: https://developers.google.com/drive/api/v3/reference/files/get
-        item = self.drive.files().get(doc_id)
-        content = self._extract_docx_content(item)
+        # Modify the parent class's method
         doc = super().get_by_id(doc_id)
+
+        # Extract content and add it to the doc
+        drive = self.drive
+        item = drive.get(fileId=doc_id).execute()
+        content = self._extract_docx_content(item)
         doc["content"] = content
+
+        return doc
 
     def _extract_docx_content(self, item):
         content = ""
+
+        # Extract the document type from the mimeType field, and determine if this is really a docx file
         mimetype = re.split(r"[/\.]", item["mimeType"])[-1]
         mimemap = {"document": "docx"}
         if mimetype not in mimemap.keys():
             # Not a document - just a file
             return content
 
-        msg = 'Indexing content of Google Drive document "%s" of type "%s"' % (
+        msg = 'Extracting content of Google Drive document "%s" of type "%s"' % (
             item["name"],
             mimetype,
         )
