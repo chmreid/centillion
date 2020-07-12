@@ -3,6 +3,7 @@ import typing
 import logging
 
 from centillion.config import Config
+from centillion.error import CentillionConfigException
 from centillion.doctypes.doctype import Doctype
 from centillion.doctypes.gdrive import (
     GDriveBaseDoctype,
@@ -11,7 +12,7 @@ from centillion.doctypes.gdrive import (
     get_gdrive_service,
 )
 
-from .decorators import integration_test
+from .decorators import integration_test, standalone_test
 from .mixins import IntegrationTestMixin, ConstructorTestMixin, SchemaTestMixin, RemoteListTestMixin
 
 
@@ -26,12 +27,12 @@ class FindTokenPathTest(unittest.TestCase):
     pass
 
 
-@integration_test
 class GetGDriveServiceTest(IntegrationTestMixin):
     """
-    Test the get_gdrive_service() method
+    Test the get_gdrive_service() method with valid (integration test) credentials
     """
 
+    @integration_test
     def test_get_gdrive_service(self):
         # Note: integration test decorator will set the config file to real values
         doctypes_names_map = Config.get_doctypes_names_map()
@@ -45,6 +46,28 @@ class GetGDriveServiceTest(IntegrationTestMixin):
             conf = Config.get_doctype_config(name)
             token_path = conf["token_path"]
             get_gdrive_service(token_path)
+
+
+class GetGDriveServiceInvalidCredentialsTest(unittest.TestCase):
+    """
+    Test the get_gdrive_service() method with invalid (standalone test) credentials
+    """
+
+    @standalone_test
+    def test_get_gdrive_service_invalid_credentials(self):
+        # Note: standalone test decorator will set the tokens in the config file to something bogus
+        doctypes_names_map = Config.get_doctypes_names_map()
+        names = []
+        # Collect names of credentials that correspond to GDrive doctypes
+        for doctype, nameslist in doctypes_names_map.items():
+            if doctype in GDRIVE_DOCTYPES:
+                names.append(*nameslist)
+        # Now assert that creating a GDrive service for any will fail
+        for name in names:
+            conf = Config.get_doctype_config(name)
+            token_path = conf["token_path"]
+            with self.assertRaises(CentillionConfigException):
+                get_gdrive_service(token_path)
 
 
 class GDriveDoctypeTest(
