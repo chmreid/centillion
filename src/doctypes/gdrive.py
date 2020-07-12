@@ -100,6 +100,9 @@ class GDriveBaseDoctype(Doctype):
         """
         Constructor is only passed the name of the credentials.
         Constructor uses name to get GDrive credentials.
+        Keeping inputs as (*args, **kwargs) makes it easier for child classes
+        to define their own constructor method signatures, with their own args
+        and kwargs, rather than specifying it here at a super abstract level.
         """
         self.name = args[0]
         self._parse_config()
@@ -135,6 +138,14 @@ class GDriveFileDoctype(GDriveBaseDoctype):
         owner_email=fields.TEXT(stored=True),
         owner_name=fields.TEXT(stored=True),
     )
+
+    def __init__(self, name):
+        """
+        This class defines a constructor so that the signature is more narrow
+        and easier to check than the (*args, **kwargs) constructor inputs of
+        the parent classes.
+        """
+        super().__init__(name)
 
     @classmethod
     def render_search_result(cls, whoosh_search_result):
@@ -327,6 +338,10 @@ class GDriveDocxDoctype(GDriveFileDoctype):
         **GDriveFileDoctype.schema,
         content=fields.TEXT(stored=True, analyzer=get_stemming_analyzer()),
     )
+
+    def __init__(self, name):
+        """Define a narrow constructor signature."""
+        super().__init__(name)
 
     @classmethod
     def get_jinja_template(cls) -> str:

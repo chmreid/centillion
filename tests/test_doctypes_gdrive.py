@@ -29,12 +29,12 @@ class FindTokenPathTest(unittest.TestCase):
 
 class GetGDriveServiceTest(IntegrationTestMixin):
     """
-    Test the get_gdrive_service() method with valid (integration test) credentials
+    Test the get_gdrive_service() method with valid and invalid credentials.
     """
 
     @integration_test
     def test_get_gdrive_service(self):
-        # Note: integration test decorator will set the config file to real values
+        """Test the get_gdrive_service() with valid (integration test) credentials"""
         doctypes_names_map = Config.get_doctypes_names_map()
         names = []
         # Collect names of credentials that correspond to GDrive doctypes
@@ -47,15 +47,9 @@ class GetGDriveServiceTest(IntegrationTestMixin):
             token_path = conf["token_path"]
             get_gdrive_service(token_path)
 
-
-class GetGDriveServiceInvalidCredentialsTest(unittest.TestCase):
-    """
-    Test the get_gdrive_service() method with invalid (standalone test) credentials
-    """
-
     @standalone_test
     def test_get_gdrive_service_invalid_credentials(self):
-        # Note: standalone test decorator will set the tokens in the config file to something bogus
+        """Test the get_gdrive_service() with invalid (standalone test) credentials"""
         doctypes_names_map = Config.get_doctypes_names_map()
         names = []
         # Collect names of credentials that correspond to GDrive doctypes
@@ -89,8 +83,7 @@ class GDriveDoctypeTest(
 
     def test_gdrive_base_doctype(self):
         """Test the GDriveBaseDoctype constructor, mocking the Google Drive API creation/credentials validation step"""
-        # with mock.patch("centillion.doctypes.github.Github") as gh:
-        #     GithubBaseDoctype(name)
+        # Just call the constructor of GDriveBaseDoctype
         pass
 
     @integration_test
@@ -100,16 +93,29 @@ class GDriveDoctypeTest(
         for doctype, names in doctypes_names_map.items():
             name = names[0]
             if doctype in GDRIVE_DOCTYPES:
+                # TODO: This should use the registry
                 GDriveBaseDoctype(name)
 
-    @integration_test
+    @standalone_test
     def test_gdrive_doctype_constructors_invalid_credentials(self):
         # Set invalid credentials and ensure validate credentials method catches it
-        pass
+        doctypes_names_map = Config.get_doctypes_names_map()
+        for doctype, names in doctypes_names_map.items():
+            name = names[0]
+            if doctype in GDRIVE_DOCTYPES:
+                # TODO: This should use the registry
+                GDriveBaseDoctype(name)
 
     def test_gdrive_doctype_constructors_invalid(self):
         # Check that invalid inputs to constructor will not work
-        pass
+        doctypes_names_map = Config.get_doctypes_names_map()
+        for doctype, names in doctypes_names_map.items():
+            if doctype in GDRIVE_DOCTYPES:
+                junkargs = ['foo', 'bar', 1000000]
+                junkkwargs = {'a': 10, 'b': 20}
+                with self.assertRaises(TypeError):
+                    # TODO: this should use the registry
+                    GDriveBaseDoctype(*junkargs, **junkkwargs)
 
     def test_render_search_result(self):
         # Mock whoosh search result
@@ -145,18 +151,6 @@ class GDriveDoctypeTest(
     def test_get_remote_map(self):
         doctypes_names_map = Config.get_doctypes_names_map()
         self.check_doctype_remote_map(GDRIVE_DOCTYPES, doctypes_names_map)
-
-    @integration_test
-    def test_gdrive_file(self):
-        """Test the get_by_id (and get_schema) methods for the GDrive file doctype"""
-        # Get a doc id, and look it up
-        pass
-
-    @integration_test
-    def test_gdrive_docx(self):
-        """Test the get_by_id (and get_schema) methods for the GDrive docx doctype"""
-        # Get a doc id, and look it up
-        pass
 
     def _get_gdrive_doctype_classes(self) -> typing.List[typing.Any]:
         """
