@@ -234,6 +234,17 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
 
     def test_github_doctype_constructors_invalid(self):
         # Check that invalid inputs to constructor will not work
+        # registry = Doctype.get_registry()
+        # doctypes_names_map = Config.get_doctypes_names_map()
+        # for doctype, names in doctypes_names_map.items():
+        #     if doctype in GITHUB_DOCTYPES:
+        #         junkargs = ['foo', 'bar', 1000000]
+        #         junkkwargs = {'a': 10, 'b': 20}
+        #         doctype_cls = registry[doctype]
+        #         doctype_cls(name)
+        #         with self.assertRaises(TypeError):
+        #             # TODO: do we define narrow method signatures for github doctype child classes?
+        #             doctype_cls(*junkargs, **junkkwargs)
         pass
 
     def test_render_search_result(self):
@@ -285,7 +296,7 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         """Test the get_by_id methods for the Github issue/PR doctype"""
         this_doctype = "github_issue_pr"
 
-        # Get a github issue/pr doctype with real credentials from the integration config file
+        # Get a doctype class instance using real credentials
         doctypes_names_map = Config.get_doctypes_names_map()
         names = doctypes_names_map[this_doctype]
         name = names[0]
