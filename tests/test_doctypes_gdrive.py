@@ -165,7 +165,7 @@ class GDriveDoctypeTest(
         doctypes_names_map = Config.get_doctypes_names_map()
         names = doctypes_names_map[this_doctype]
         name = names[0]
-        doctype = GDriveFileDoctype(name)
+        doctype = GDriveDocxDoctype(name)
 
         # Test a real file
         docx_id = "1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8"

@@ -411,7 +411,7 @@ class GDriveDocxDoctype(GDriveFileDoctype):
 
         # Extract content and add it to the doc
         drive = self.drive
-        item = drive.get(fileId=doc_id, fields="nextPageToken, files(id, name, mimeType)").execute()
+        item = drive.get(fileId=doc_id, fields="id, name, mimeType").execute()
         content = self._extract_docx_content(item)
         doc["content"] = content
 
