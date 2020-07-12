@@ -27,9 +27,11 @@ class Config(object):
     _CONFIG_FILE: typing.Optional[str] = None
     _CONFIG: typing.Optional[dict] = None
 
-    def __init__(self, config_file=None):
+    def __new__(cls, config_file=None):
         if config_file is None:
             config_file = Config.get_required_env_var("CENTILLION_CONFIG")
+
+        cls.reset()
 
         # Check that specified config file exists
         config_file = os.path.abspath(config_file)
