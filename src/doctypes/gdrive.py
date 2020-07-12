@@ -219,7 +219,7 @@ class GDriveFileDoctype(GDriveBaseDoctype):
             results = drive.list(  # type: ignore
                 pageSize=ps,
                 pageToken=nextPageToken,
-                fields="id, kind, createdTime, modifiedTime, mimeType, name, owners, webViewLink",
+                fields="files(id, kind, createdTime, modifiedTime, mimeType, name, owners, webViewLink)",
                 spaces="drive",
             ).execute()
 
