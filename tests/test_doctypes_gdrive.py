@@ -159,7 +159,7 @@ class GDriveDoctypeTest(
         doctype = GDriveFileDoctype(name)
 
         # Test a real file
-        file_id = ""
+        file_id = "1MB-IgywX9YZVw2fIib_fzvUagUkt1o4c"
         doctype.get_by_id(file_id)
 
     @integration_test
@@ -174,7 +174,7 @@ class GDriveDoctypeTest(
         doctype = GDriveFileDoctype(name)
 
         # Test a real file
-        docx_id = ""
+        docx_id = "1pjk3c79lBN3pTW1kNHvwlYR8_24g7Zdhu4efbt-b7c8"
         doctype.get_by_id(docx_id)
 
     def _get_gdrive_doctype_classes(self) -> typing.List[typing.Any]:
