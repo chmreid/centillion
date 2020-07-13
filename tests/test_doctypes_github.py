@@ -11,6 +11,7 @@ from centillion.doctypes.github import (
     GithubFileDoctype,
     GithubMarkdownDoctype,
     get_gh_file_url,
+    get_github_repos_list,
     convert_gh_file_html_url_to_raw_url,
     convert_github_user_to_github_user_links,
     get_repo_branch_from_file_url,
@@ -46,6 +47,15 @@ class GithubDoctypeUtilsTest(IntegrationTestMixin):
     """
 
     def test_gh_url_utils(self):
+        """
+        Test Github utility functions that do not require integration configuration:
+        - get_gh_file_url
+        - convert_gh_file_html_url_to_raw_url
+        - convert_github_user_to_github_user_links
+        - get_repo_branch_from_fiel_url
+        - get_repo_name_from_url
+        - get_issue_pr_no_from_url
+        """
         repo_name = "chmreid/centillion"
         branch_name = "public"
         repo_path = "src/__init__.py"
@@ -90,6 +100,48 @@ class GithubDoctypeUtilsTest(IntegrationTestMixin):
         nums = [14, 1024, 1, 44]
         for url, num in zip(us, nums):
             self.assertEqual(get_issue_pr_no_from_url(url), num)
+
+    @integration_test
+    def test_gh_url_utils_integration(self):
+        """
+        Test Github utility functions that require integration configuration:
+        - get_pygithub_branch_refs
+        """
+        # Start by getting a Github API reference
+        registry = Doctype.get_registry()
+        doctypes_names_map = Config.get_doctypes_names_map()
+        for doctype, names in doctypes_names_map.items():
+            if doctype in GITHUB_DOCTYPES:
+                doctype_cls = registry[doctype]
+                name = names[0]
+                i = doctype_cls(name)
+                g = i.g
+                break
+
+        # get_pygithub_branch_refs
+        reponame = 'charlesreid1-centillion/centillion-search-demo'
+        branchname = 'get-pygithub-branch-refs-test'
+        sha = "946bc1e20419c58f8834789cd5a9188fa730c49f"
+        repo, branch, head_commit = get_pygithub_branch_refs(reponame, branchname, g)
+        self.assertEqual(repo.html_url, "https://github.com/%s" % reponame)
+        self.assertEqual(branch.name, branchname)
+        self.assertEqual(head_commit.sha, sha)
+
+        # get_github_repos_list
+        repo_names = [
+            "charlesreid1/centillion-search-demo",
+            "charlesreid1-centillion/centillion-search-demo",
+            "charlesreid1-centillion/centillion-search-demo-2"
+        ]
+        for doctype, names in doctypes_names_map.items():
+            if doctype in GITHUB_DOCTYPES:
+                doctype_cls = registry[doctype]
+                name = names[0]
+                i = doctype_cls(name)
+                g = i.g
+                # This gets a list of repos for organizations in the integration configuration file
+                repos_list = get_github_repos_list(name, g)
+                self.assertListEqual(sorted(repos_list), sorted(repo_names))
 
 
 class GithubDoctypePyGithubUtilsTest(IntegrationTestMixin):
@@ -248,6 +300,7 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         #         junkargs = ['foo', 'bar', 1000000]
         #         junkkwargs = {'a': 10, 'b': 20}
         #         doctype_cls = registry[doctype]
+        #         name = names[0]
         #         doctype_cls(name)
         #         with self.assertRaises(TypeError):
         #             # TODO: do we define narrow method signatures for github doctype child classes?
@@ -314,11 +367,11 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         doc = doctype.get_by_id(issue_id)
         self.assertEqual(issue_id, doc["id"])
         self.assertEqual(issue_id, doc["issue_url"])
-        self.assertEqual("Seattle drivers", doc["name"])
-        self.assertEqual("Seattle drivers", doc["issue_title"])
+        self.assertEqual("Peanut butter and jelly", doc["name"])
+        self.assertEqual("Peanut butter and jelly", doc["issue_title"])
         self.assertIn("charlesreid1", doc["github_user"])
         self.assertEqual("charlesreid1/centillion-search-demo", doc["repo_name"])
-        self.assertIn("certain Seattle drivers", doc["content"])
+        self.assertIn("any combination of said ingredients", doc["content"])
 
         # Test a real pull request (TBA)
 
