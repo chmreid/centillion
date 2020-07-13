@@ -19,7 +19,7 @@ from centillion.doctypes.github import (
     get_issue_pr_no_from_url,
     get_pygithub_branch_refs,
 )
-from centillion.error import CentillionException
+from centillion.error import CentillionException, CentillionConfigException
 
 from .context import TempCentillionConfig
 from .decorators import integration_test
@@ -142,6 +142,9 @@ class GithubDoctypeUtilsTest(IntegrationTestMixin):
                 # This gets a list of repos for organizations in the integration configuration file
                 repos_list = get_github_repos_list(name, g)
                 self.assertListEqual(sorted(repos_list), sorted(repo_names))
+                # Check that invalid inputs raise exceptions
+                with self.assertRaises(CentillionException):
+                    get_github_repos_list("thisisareallylongstringwithoutanyslashesinit", g)
 
 
 class GithubDoctypePyGithubUtilsTest(IntegrationTestMixin):
@@ -259,6 +262,27 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
         """Test the constructor of each Github doctype with (real) integration credentials"""
         doctypes_names_map = Config.get_doctypes_names_map()
         self.check_doctype_constructors(GITHUB_DOCTYPES, doctypes_names_map)
+
+    @integration_test
+    def test_github_doctype_constructors_no_access_token(self):
+        def get_config_no_access_token(name, doctype):
+            """Private utility function to create an invalid config dict"""
+            return {
+                "doctypes": [{
+                    "name": name,
+                    "doctype": doctype,
+                    "repos": [
+                        "charlesreid1/centillion-search-demo"
+                    ]
+                }]
+            }
+        name, doctype = "invalid_config_gh_file", "github_file"
+        with TempCentillionConfig(get_config_no_access_token(name, doctype)) as config_file:
+            self.assertEqual(Config._CONFIG_FILE, config_file)
+            with self.assertRaises(CentillionConfigException):
+                registry = Doctype.get_registry()
+                DoctypeCls = registry[doctype]
+                DoctypeCls(name)
 
     @integration_test
     def test_github_doctype_constructors_invalid_credentials(self):
