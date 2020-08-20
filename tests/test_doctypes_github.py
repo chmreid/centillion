@@ -332,15 +332,15 @@ class GithubDoctypeTest(ConstructorTestMixin, SchemaTestMixin, RemoteListTestMix
 
     @integration_test
     def test_github_ignore_file_check(self):
-        #i = GithubFileDoctype()
+        # i = GithubFileDoctype()
         #
-        #for name, doctype in names_doctypes:
-        #    with TempCentillionConfig(get_invalid_config(name, doctype)) as config_file:
-        #        self.assertEqual(Config._CONFIG_FILE, config_file)
-        #        with self.assertRaises(CentillionException):
-        #            registry = Doctype.get_registry()
-        #            DoctypeCls = registry[doctype]
-        #            DoctypeCls(name)
+        # for name, doctype in names_doctypes:
+        #     with TempCentillionConfig(get_invalid_config(name, doctype)) as config_file:
+        #         self.assertEqual(Config._CONFIG_FILE, config_file)
+        #         with self.assertRaises(CentillionException):
+        #             registry = Doctype.get_registry()
+        #             DoctypeCls = registry[doctype]
+        #             DoctypeCls(name)
         pass
 
     def test_render_search_result(self):
