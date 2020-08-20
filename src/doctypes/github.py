@@ -13,7 +13,7 @@ from github import Github, GithubException
 from .content import get_stemming_analyzer, scrub_markdown
 from .doctype import Doctype
 from ..config import Config
-from ..error import CentillionConfigException
+from ..error import CentillionException, CentillionConfigException
 from ..util import SearchResult, search_results_timestamps_datetime_to_str
 
 
@@ -160,7 +160,7 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
                 org = g.get_user(this_org)
             except GithubException:
                 err = f"Error: could not gain access to Github org/user {this_org}"
-                raise Exception(err)
+                raise CentillionException(500, err, "Error")
         repos = org.get_repos()
         for repo in repos:
             # Check this
@@ -172,7 +172,7 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
     logger.debug(f"Adding repositories...")
     for _, r in enumerate(repos):
         if "/" not in r:
-            raise Exception("Error: invalid repo name specified")
+            raise CentillionException(500, "Error: invalid repo name specified", "Error")
         this_org, this_repo = re.split("/", r)
         try:
             org = g.get_organization(this_org)
@@ -183,7 +183,7 @@ def get_github_repos_list(name: str, g) -> typing.List[str]:
                 repo = user.get_repo(this_repo)
             except GithubException:
                 err = f"Error: could not gain access to repo {this_org}/{this_repo}"
-                raise Exception(err)
+                raise CentillionException(500, err, "Error")
 
         # Check this
         logger.debug(f" + Adding repository {repo.full_name}")
@@ -619,7 +619,8 @@ class GithubFileDoctype(GithubBaseDoctype):
 
         return remote_map
 
-    def _ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
+    @classmethod
+    def _ignore_file_check(cls, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
         """
         Return True if this file should be ignored when assembling the remote list of files.
         Subclasses can override this method to return remote lists but with filtered filetypes.
