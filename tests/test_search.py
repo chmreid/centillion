@@ -31,7 +31,7 @@ class SearchInitIndexTest(unittest.TestCase):
         """
         doc = get_plain_docs(n=1)[0]
 
-        with self.subTest("Search index is created without centillion_index config"):
+        with self.subTest("Test that search index is created without centillion_index set in the config file"):
             with tempfile.TemporaryDirectory() as td:
                 config = get_plain_config()
                 config["centillion_root"] = td
@@ -42,7 +42,7 @@ class SearchInitIndexTest(unittest.TestCase):
                     self.assertEqual(os.path.join(td, "index"), Config.get_centillion_indexdir())
                     self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
 
-        with self.subTest("Search index is created with centillion_index"):
+        with self.subTest("Search index is created with centillion_index set in the config file"):
             with tempfile.TemporaryDirectory() as td1:
                 with tempfile.TemporaryDirectory(prefix=td1 + "/") as td2:
                     config = get_plain_config()
@@ -56,7 +56,7 @@ class SearchInitIndexTest(unittest.TestCase):
                         self.assertEqual(td2, Config.get_centillion_indexdir())
                         self.assertTrue(os.path.exists(Config.get_centillion_indexdir()))
 
-        with self.subTest("Search index is created with centillion_index, centillion_root separated"):
+        with self.subTest("Test search index is created with centillion_index, centillion_root separated"):
             with tempfile.TemporaryDirectory() as td1, tempfile.TemporaryDirectory() as td2:
                 config = get_plain_config()
                 config["centillion_root"] = td1
