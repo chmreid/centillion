@@ -747,7 +747,8 @@ class GithubMarkdownDoctype(GithubFileDoctype):
         """
         return template
 
-    def _ignore_file_check(self, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
+    @classmethod
+    def _ignore_file_check(cls, fname: str, fext: str, fpathpieces: typing.List[str]) -> bool:
         """
         Return True if this file should be ignored when assembling the remote list of files.
         Extends GithubFileDoctype._ignore_file_check
